@@ -13,8 +13,10 @@ Frontend hay kết nối trực tiếp đến PostgreSQL.
 - Authentication: JWT Bearer token
 - Token hết hạn theo `ACCESS_TOKEN_EXPIRE_MINUTES`, mặc định trong code là 30 phút.
 - Role hợp lệ: `user`, `moderator`, `admin`.
-- Video hiện chỉ nhận MP4, tối đa 50 MiB, lưu local trong `UPLOAD_DIR`.
-- AI hiện là `run_mock_analysis`; không gọi Cloud Storage hoặc API AI thật.
+- Video chỉ nhận MP4, tối đa 50 MiB; storage hỗ trợ local và S3-compatible
+  Cloudflare R2.
+- AI background có thể chạy NSFW-Detection thật theo `AI_ANALYSIS_MODE`; khi
+  xử lý video cũng trích xuất thumbnail JPEG vào storage.
 - Không có endpoint logout, refresh token hoặc password reset. Admin
   user-management và endpoint phát video (`GET /api/v1/videos/{video_id}/stream`)
   đã tồn tại, mô tả lần lượt ở mục 3.15–3.19 và 3.20.
@@ -300,7 +302,8 @@ curl http://127.0.0.1:8000/api/v1/profile ^
 - Path: `/api/v1/videos`
 - Operation ID: `upload_video`
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/videos?caption=Demo`
-- Chức năng: lưu video local, tạo AI job mock và trả metadata video.
+- Chức năng: lưu video qua storage driver (R2 hoặc local), tạo AI job và trả
+  metadata video.
 - Module: Video Upload
 - Authentication: Bắt buộc Bearer JWT
 - Role/permission: User active; không yêu cầu moderator/admin.
@@ -347,8 +350,9 @@ codec `avc1`, `hvc1`, `hev1`, `av01` hoặc `mp4v`.
 }
 ```
 
-HTTP `201`. Background mock analysis có thể chuyển status thành `published`
-và tạo kết quả AI sau khi request hoàn tất.
+HTTP `201`. Background analysis có thể chuyển status thành `published` nếu an toàn hoặc
+`pending_review` nếu phát hiện vi phạm. Thumbnail được lưu theo key
+`thumbnails/<video_id>.jpg`.
 
 **F. Lỗi thường gặp**
 
@@ -429,30 +433,161 @@ curl http://127.0.0.1:8000/api/v1/videos ^
 - Path: `/api/v1/feed`
 - Operation ID: `feed`
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/feed`
-- Chức năng: liệt kê tối đa 50 video `published`, chưa bị xóa.
+- Chức năng: cursor pagination các video `published`, `public`, chưa bị xóa.
 - Module: Video Management
 - Authentication: Không yêu cầu
 - Role/permission: Không có
 - Content-Type: Không có body
 - Trạng thái xác minh: **Đã test** — Video Management collection.
 
-**A/B. Path và query parameters**: Không có.
+**A/B. Path và query parameters**
+
+| Tham số | Kiểu | Bắt buộc | Mặc định | Quy tắc |
+|---|---|---:|---:|---|
+| `limit` | integer | Không | `8` | `1..20`; backend lấy `limit + 1` để tính `has_more` |
+| `cursor` | ISO datetime/null | Không | `null` | Chỉ lấy video có `created_at` nhỏ hơn cursor |
 
 **C. Headers**: Không bắt buộc.
 
 **D. Request body**: Không có.
 
-**E. Response mẫu**: Cùng cấu trúc mỗi phần tử với `VideoResponse` ở mục 3.6.
-HTTP `200`; có thể là `[]`.
+**E. Response mẫu**
+
+```json
+{
+  "items": [
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "caption": "Demo",
+      "stream_url": "https://pub-example.r2.dev/videos/<video_id>.mp4",
+      "thumbnail_url": "https://pub-example.r2.dev/thumbnails/<video_id>.jpg",
+      "allow_comments": true,
+      "created_at": "2026-11-01T15:00:00Z"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "2026-11-01T15:00:00Z"
+}
+```
+
+`thumbnail_url` có thể là `null` nếu thumbnail chưa tồn tại. `stream_url`
+trỏ trực tiếp tới CDN R2 khi dùng S3 storage và hỗ trợ Range Request. HTTP
+`200`; `items` có thể là `[]`.
+
+Frontend phải đọc `response.items` trước khi gọi `.map()` và dùng trực tiếp
+`item.stream_url`; không tự ghép `/api/v1/videos/{video_id}/stream` cho Feed.
 
 **F. Lỗi thường gặp**: lỗi kết nối database có thể gây `5xx`; không có lỗi
-nghiệp vụ riêng trong endpoint.
+nghiệp vụ riêng trong endpoint. `422` nếu `limit` ngoài `1..20` hoặc cursor
+không đúng định dạng.
 
 **G. Ví dụ gọi API**
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/feed
 ```
+
+### 3.7.1 Tìm kiếm video theo tag — Grid View
+
+**Thông tin chung**
+
+- Method: `GET`
+- Path: `/api/v1/videos/search`
+- Alias: `/api/v1/search/videos-by-tag/grid`
+- Full URL mẫu:
+  `http://127.0.0.1:8000/api/v1/videos/search?tag=Safe&limit=12`
+- Chức năng: tìm video theo label để hiển thị dạng grid.
+- Authentication: Không yêu cầu.
+- Trạng thái xác minh: **Đã test** — tag `Safe`, cursor pagination và CDN
+  thumbnail.
+
+**A/B. Query parameters**
+
+| Tham số | Kiểu | Bắt buộc | Mặc định | Quy tắc |
+|---|---|---:|---:|---|
+| `tag` | string | Có | — | Không được rỗng; matching không phân biệt hoa thường |
+| `limit` | integer | Không | `12` | `1..20` |
+| `cursor` | ISO datetime/null | Không | `null` | Lọc `created_at < cursor` |
+
+Chỉ video thỏa đồng thời `published`, `visibility=public` và
+`is_deleted=false` được trả về.
+
+**C. Response mẫu**
+
+```json
+{
+  "items": [
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "caption": "Demo",
+      "thumbnail_url": "https://pub-example.r2.dev/thumbnails/<video_id>.jpg",
+      "stream_url": "https://pub-example.r2.dev/videos/<video_id>.mp4",
+      "like_count": 12,
+      "author": {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "username": "Example User#1234",
+        "avatar_url": null
+      },
+      "matched_labels": ["Safe"],
+      "created_at": "2026-11-01T15:00:00Z"
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}
+```
+
+Grid nên chỉ render `thumbnail_url` (ví dụ 4 cột); chỉ tải/phát
+`stream_url` khi người dùng mở video.
+
+### 3.7.2 Chỉnh sửa video và quản lý nhãn (UC007)
+
+#### PATCH `/api/v1/videos/{video_id}`
+
+Owner có thể cập nhật caption, `visibility` (`public` hoặc `private`) và
+`allow_comments` (boolean). Không thể thay đổi file gốc, view count, like
+count hoặc audit data.
+
+```json
+{
+  "caption": "Updated caption",
+  "visibility": "private",
+  "allow_comments": false
+}
+```
+
+Video `is_deleted=true` trả `404`. Video `rejected` không được chuyển sang
+`public` qua route này và trả `400`.
+
+#### GET `/api/v1/videos/{video_id}/labels`
+
+Trả danh sách label gồm `name`, `confidence`, `level` và `source` (`ai` hoặc
+`user`).
+
+#### POST `/api/v1/videos/{video_id}/labels/confirm`
+
+Đây là path thực tế trong router; path `/confirm-labels` không được đăng ký.
+Owner gửi:
+
+```json
+{"labels": ["travel", "vlog"]}
+```
+
+Label AI vi phạm nghiêm trọng (`Adult`, `level=HIGH`, `source=ai`) được bảo
+toàn và không bị ghi đè hoặc xóa bởi danh sách user. Video vẫn ở
+`pending_review`, kể cả khi owner xác nhận danh sách label khác.
+
+#### Comment enforcement
+
+`POST /api/v1/videos/{video_id}/comments` trả `403 Forbidden` khi
+`allow_comments=false`. Tương tác với video soft-deleted trả `404`.
+
+### 3.7.3 Thumbnail và storage
+
+Frame đầu tiên (fallback khoảng `0.5s` nếu cần) được encode JPEG quality 85
+qua OpenCV. Object key chuẩn hóa là `thumbnails/<video_id>.jpg`; video dùng
+`videos/<video_id>.mp4`. `StorageService` hỗ trợ upload local/S3, tải video
+vào temporary directory cho AI và tự dọn temporary file sau khi xử lý.
 
 ### 3.8 Xem kết quả AI của video
 
@@ -981,11 +1116,18 @@ curl -X PATCH http://127.0.0.1:8000/api/v1/admin/users/<user_id>/role ^
 
 **D. Request body**: Không có.
 
-**E. Response**: HTTP `200` với body là tệp MP4 và header `Cache-Control: private, max-age=60`. Trình duyệt thường gửi `Range`; Starlette trả `206 Partial Content` cho phần được yêu cầu.
+**E. Response**:
+
+- Với S3/R2 và video public: HTTP `307 Temporary Redirect` tới
+  `S3_PUBLIC_DOMAIN/videos/<video_id>.mp4`; CDN trả `200` hoặc `206 Partial
+  Content` cho Range Request.
+- Với local legacy storage: HTTP `200` với body là tệp MP4 và header
+  `Cache-Control: private, max-age=60`; Range có thể trả `206`.
 
 **F. Lỗi thường gặp**
 
 - `404`: video không tồn tại, đã soft-delete, chưa `published` mà caller không có quyền, hoặc tệp không còn trong `UPLOAD_DIR`.
+- `307`: redirect bình thường sang CDN R2, không phải lỗi.
 
 **G. Ví dụ gọi API**
 
@@ -1037,29 +1179,39 @@ curl -OJ http://127.0.0.1:8000/api/v1/videos/<video_id>/stream
 | 5 | POST | `/api/v1/videos` | Video Upload | JWT | Đã test |
 | 6 | GET | `/api/v1/videos` | Video Management | JWT | Đã test |
 | 7 | GET | `/api/v1/feed` | Video Management | Không | Đã test |
-| 8 | GET | `/api/v1/videos/{video_id}/ai` | AI Analysis | JWT + owner/mod/admin | Đã test |
-| 9 | DELETE | `/api/v1/videos/{video_id}` | Video Management | JWT + owner | Đã test |
-| 10 | POST | `/api/v1/videos/{video_id}/reports` | Content Report | JWT | Đã test |
-| 11 | GET | `/api/v1/moderation/queue` | Moderation | JWT + mod/admin | Đã test |
-| 12 | POST | `/api/v1/moderation/videos/{video_id}/decision` | Moderation | JWT + mod/admin | Code/OpenAPI |
-| 13 | GET | `/api/v1/moderation/reports` | Moderation | JWT + mod/admin | Đã test |
-| 14 | POST | `/api/v1/moderation/reports/{report_id}/decision` | Moderation | JWT + mod/admin | Đã test |
-| 15 | GET | `/api/v1/admin/users` | Admin Management | JWT + admin | Đã test |
-| 16 | GET | `/api/v1/admin/users/{user_id}` | Admin Management | JWT + admin | Đã test |
-| 17 | PATCH | `/api/v1/admin/users/{user_id}/status` | Admin Management | JWT + admin | Đã test |
-| 18 | GET | `/api/v1/admin/moderators` | Admin Management | JWT + admin | Đã test |
-| 19 | PATCH | `/api/v1/admin/users/{user_id}/role` | Admin Management | JWT + admin | Đã test |
-| 20 | GET | `/api/v1/videos/{video_id}/stream` | Video Management | Không (JWT nếu chưa published) | Đã test |
+| 8 | GET | `/api/v1/videos/search` | Tag Search | Không | Đã test |
+| 9 | GET | `/api/v1/search/videos-by-tag/grid` | Tag Search | Không | Code/OpenAPI |
+| 10 | GET | `/api/v1/videos/{video_id}/ai` | AI Analysis | JWT + owner/mod/admin | Đã test |
+| 11 | PATCH | `/api/v1/videos/{video_id}` | Video Management | JWT + owner | Đã test |
+| 12 | GET | `/api/v1/videos/{video_id}/labels` | Label Management | Không/optional JWT | Code/OpenAPI |
+| 13 | POST | `/api/v1/videos/{video_id}/labels/confirm` | Label Management | JWT + owner | Đã test |
+| 14 | DELETE | `/api/v1/videos/{video_id}` | Video Management | JWT + owner | Đã test |
+| 15 | POST | `/api/v1/videos/{video_id}/reports` | Content Report | JWT | Đã test |
+| 16 | GET | `/api/v1/videos/{video_id}/comments` | Social Interactions | JWT | Đã test |
+| 17 | POST | `/api/v1/videos/{video_id}/comments` | Social Interactions | JWT | Đã test |
+| 18 | GET | `/api/v1/moderation/queue` | Moderation | JWT + mod/admin | Đã test |
+| 19 | POST | `/api/v1/moderation/videos/{video_id}/decision` | Moderation | JWT + mod/admin | Code/OpenAPI |
+| 20 | GET | `/api/v1/moderation/reports` | Moderation | JWT + mod/admin | Đã test |
+| 21 | POST | `/api/v1/moderation/reports/{report_id}/decision` | Moderation | JWT + mod/admin | Đã test |
+| 22 | GET | `/api/v1/admin/users` | Admin Management | JWT + admin | Đã test |
+| 23 | GET | `/api/v1/admin/users/{user_id}` | Admin Management | JWT + admin | Đã test |
+| 24 | PATCH | `/api/v1/admin/users/{user_id}/status` | Admin Management | JWT + admin | Đã test |
+| 25 | GET | `/api/v1/admin/moderators` | Admin Management | JWT + admin | Đã test |
+| 26 | PATCH | `/api/v1/admin/users/{user_id}/role` | Admin Management | JWT + admin | Đã test |
+| 27 | GET | `/api/v1/videos/{video_id}/stream` | Video Management | Không (JWT nếu chưa published) | Đã test |
 
 ## 6. Đối chiếu và giới hạn
 
-- OpenAPI runtime sau thay đổi đã trả 19 path và 20 operation như bảng trên.
+- OpenAPI runtime sau thay đổi bao gồm Feed cursor, tag search grid, video edit,
+  labels, social interactions và R2 redirect stream như các mục trên.
 - Không có router khác được đăng ký trong application hiện tại.
-- Không có query pagination, search hoặc filter trong các endpoint list.
-- File video chỉ lấy được qua endpoint stream ở mục 3.20; `storage_path` không
+- Feed và tag search dùng cursor pagination; các endpoint list khác chưa có
+  pagination/search/filter chung.
+- File video chỉ lấy được qua endpoint stream; `storage_path` không
   được trả ra trong `VideoResponse`.
 - Không có logout, token revocation, refresh token hoặc password recovery.
-- Không có Admin Management API dù enum `admin` và quyền moderation đã tồn tại.
+- `PATCH /api/v1/videos/{video_id}` không cho phép đổi file, view count, like
+  count hoặc audit data.
 - Endpoint quyết định video moderation đã đối chiếu source/OpenAPI nhưng chưa có
   request Newman riêng; vì vậy được đánh dấu `Code/OpenAPI`, không đánh dấu
   `Đã test`.
