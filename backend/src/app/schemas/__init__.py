@@ -11,7 +11,15 @@ from app.schemas.admin import (
     ModeratorStatsResponse,
     ModeratorWorkloadItem,
 )
-from app.schemas.auth import LoginRequest, TokenResponse
+from app.schemas.auth import (
+    LoginRequest,
+    LogoutRequest,
+    PasswordForgotRequest,
+    PasswordForgotResponse,
+    PasswordResetRequest,
+    RefreshTokenRequest,
+    TokenResponse,
+)
 from app.schemas.moderation import (
     AppealCreate,
     AppealDecisionRequest,
@@ -80,12 +88,17 @@ __all__ = [
     "LabelResponse",
     "LikeResponse",
     "LoginRequest",
+    "LogoutRequest",
     "MessageResponse",
     "ModerationDecisionRequest",
     "ModeratorStatsResponse",
     "ModeratorWorkloadItem",
+    "PasswordForgotRequest",
+    "PasswordForgotResponse",
+    "PasswordResetRequest",
     "ProfileUpdate",
     "PublicUserResponse",
+    "RefreshTokenRequest",
     "ReplaceVideoLabelsRequest",
     "ReportCreate",
     "ReportResponse",

@@ -223,7 +223,8 @@ Content-Type: application/json
 ```json
 {
   "access_token": "<access_token_from_this_response>",
-  "token_type": "bearer"
+  "token_type": "bearer",
+  "refresh_token": "<refresh_token_from_this_response>"
 }
 ```
 
@@ -1337,6 +1338,170 @@ curl -OJ http://127.0.0.1:8000/api/v1/videos/<video_id>/stream
 - Role/permission: `admin`
 - Trạng thái xác minh: **Đã test** — Pytest `test_moderator_and_system_stats`.
 
+### 3.31 Làm mới token (Refresh Token)
+
+**Thông tin chung**
+
+- Method: `POST`
+- Path: `/api/v1/auth/refresh`
+- Operation ID: `refresh`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/auth/refresh`
+- Chức năng: Xoay vòng (rotation) refresh token, cấp cặp access token và refresh token mới, thu hồi token cũ.
+- Module: Auth
+- Authentication: Không yêu cầu (dùng opaque refresh token trong body)
+- Role/permission: Không có
+- Content-Type: `application/json`
+- Trạng thái xác minh: **Đã test** — Pytest `test_auth_session.py`.
+
+**A/B. Path và query parameters**: Không có.
+
+**C. Headers**: `Content-Type: application/json`
+
+**D. Request body**
+
+```json
+{
+  "refresh_token": "<refresh_token_here>"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Quy tắc |
+|---|---|---:|---|
+| `refresh_token` | string | Có | Token chuỗi ngẫu nhiên (opaque token) |
+
+**E. Response mẫu**
+
+```json
+{
+  "access_token": "<new_access_token>",
+  "token_type": "bearer",
+  "refresh_token": "<new_refresh_token>"
+}
+```
+
+HTTP `200 OK`.
+
+**F. Lỗi thường gặp**
+
+- `401`: Refresh token không hợp lệ, đã hết hạn, hoặc đã bị thu hồi/sử dụng trước đó (chống token reuse).
+
+---
+
+### 3.32 Đăng xuất (Logout & Token Revocation)
+
+**Thông tin chung**
+
+- Method: `POST`
+- Path: `/api/v1/auth/logout`
+- Operation ID: `logout`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/auth/logout`
+- Chức năng: Đăng xuất phiên làm việc; đưa `jti` của access token vào blacklist `RevokedToken` và thu hồi `RefreshToken` tương ứng.
+- Module: Auth
+- Authentication: Bắt buộc Bearer JWT
+- Role/permission: User active
+- Content-Type: `application/json` (tuỳ chọn)
+- Trạng thái xác minh: **Đã test** — Pytest `test_auth_session.py`.
+
+**A/B. Path và query parameters**: Không có.
+
+**C. Headers**: `Authorization: Bearer <access_token>`, `Content-Type: application/json` (tuỳ chọn)
+
+**D. Request body** (Tuỳ chọn)
+
+```json
+{
+  "refresh_token": "<refresh_token_to_revoke>"
+}
+```
+
+**E. Response mẫu**
+
+HTTP `204 No Content`.
+
+**F. Lỗi thường gặp**
+
+- `401`: Access token không hợp lệ, thiếu token, hoặc token đã bị thu hồi trước đó.
+
+---
+
+### 3.33 Yêu cầu quên mật khẩu (Password Recovery Request)
+
+**Thông tin chung**
+
+- Method: `POST`
+- Path: `/api/v1/auth/password/forgot` (alias `/api/v1/auth/forgot-password`)
+- Operation ID: `forgot_password`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/auth/password/forgot`
+- Chức năng: Tạo token đặt lại mật khẩu với thời hạn cấu hình; trả về phản hồi generic an toàn để chống dò quét tài khoản người dùng.
+- Module: Auth
+- Authentication: Không yêu cầu
+- Role/permission: Không có
+- Content-Type: `application/json`
+- Trạng thái xác minh: **Đã test** — Pytest `test_auth_session.py`.
+
+**A/B. Path và query parameters**: Không có.
+
+**C. Headers**: `Content-Type: application/json`
+
+**D. Request body**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**E. Response mẫu**
+
+```json
+{
+  "message": "Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi.",
+  "reset_token": "<reset_token_for_test_mode_or_null>"
+}
+```
+
+HTTP `202 Accepted`.
+
+---
+
+### 3.34 Đặt lại mật khẩu (Password Reset)
+
+**Thông tin chung**
+
+- Method: `POST`
+- Path: `/api/v1/auth/password/reset` (alias `/api/v1/auth/reset-password`)
+- Operation ID: `reset_password`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/auth/password/reset`
+- Chức năng: Xác thực token khôi phục (sử dụng 1 lần), cập nhật mật khẩu mới và tự động vô hiệu hóa toàn bộ refresh token cũ của người dùng.
+- Module: Auth
+- Authentication: Không yêu cầu
+- Role/permission: Không có
+- Content-Type: `application/json`
+- Trạng thái xác minh: **Đã test** — Pytest `test_auth_session.py`.
+
+**A/B. Path và query parameters**: Không có.
+
+**C. Headers**: `Content-Type: application/json`
+
+**D. Request body**
+
+```json
+{
+  "token": "<reset_token>",
+  "new_password": "NewStrongPassword123"
+}
+```
+
+**E. Response mẫu**
+
+HTTP `204 No Content`.
+
+**F. Lỗi thường gặp**
+
+- `422`: Token không hợp lệ, token đã được dùng hoặc đã hết hạn. Mật khẩu không đáp ứng độ dài tối thiểu (8 ký tự).
+
+---
+
 ## 4. Luồng gọi API thực tế
 
 ### 4.1 Tạo user và đọc profile
@@ -1411,6 +1576,10 @@ curl -OJ http://127.0.0.1:8000/api/v1/videos/<video_id>/stream
 | 35 | PATCH | `/api/v1/admin/videos/{video_id}/status` | Video Administration | JWT + admin | Đã test |
 | 36 | GET | `/api/v1/admin/stats` | System Statistics | JWT + admin | Đã test |
 | 37 | GET | `/api/v1/admin/moderators/{moderator_id}/stats` | Moderator Statistics | JWT + admin | Đã test |
+| 38 | POST | `/api/v1/auth/refresh` | Auth | Không | Đã test |
+| 39 | POST | `/api/v1/auth/logout` | Auth | JWT | Đã test |
+| 40 | POST | `/api/v1/auth/password/forgot` | Auth | Không | Đã test |
+| 41 | POST | `/api/v1/auth/password/reset` | Auth | Không | Đã test |
 
 ## 6. Đối chiếu và giới hạn
 
@@ -1421,7 +1590,7 @@ curl -OJ http://127.0.0.1:8000/api/v1/videos/<video_id>/stream
   pagination/search/filter chung.
 - File video chỉ lấy được qua endpoint stream; `storage_path` không
   được trả ra trong `VideoResponse`.
-- Không có logout, token revocation, refresh token hoặc password recovery.
+- Đã hoàn tất hỗ trợ đầy đủ cơ chế logout, thu hồi token (blacklist JTI), xoay vòng refresh token và quy trình khôi phục mật khẩu (password recovery).
 - `PATCH /api/v1/videos/{video_id}` không cho phép đổi file, view count, like
   count hoặc audit data.
 - Endpoint quyết định video moderation đã đối chiếu source/OpenAPI nhưng chưa có

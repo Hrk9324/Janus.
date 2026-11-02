@@ -1,3 +1,4 @@
+from app.models.auth import PasswordResetToken, RefreshToken, RevokedToken
 from app.models.base import Base, utcnow
 from app.models.enums import (
     AppealStatus,
@@ -24,8 +25,11 @@ __all__ = [
     "LabelSource",
     "ModerationAction",
     "ModerationReview",
+    "PasswordResetToken",
+    "RefreshToken",
     "Report",
     "ReportStatus",
+    "RevokedToken",
     "User",
     "UserFollow",
     "UserRole",

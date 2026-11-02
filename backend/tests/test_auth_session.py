@@ -1,9 +1,6 @@
 """Test phiên đăng nhập: các route đã triển khai và các gap được đánh dấu."""
 
-import pytest
 
-
-@pytest.mark.xfail(reason="Logout route is not implemented")
 def test_logout_revokes_current_access_token(client, register):
     headers = register("logout@example.com")
     assert client.get("/api/v1/profile", headers=headers).status_code == 200
@@ -15,7 +12,6 @@ def test_logout_revokes_current_access_token(client, register):
     assert "Phiên đăng nhập đã kết thúc" in after.json()["detail"]
 
 
-@pytest.mark.xfail(reason="Refresh-token rotation is not implemented")
 def test_login_returns_refresh_token_and_rotation(client, register):
     email = "refresh@example.com"
     register(email)
@@ -42,7 +38,6 @@ def test_login_returns_refresh_token_and_rotation(client, register):
     assert reuse.status_code == 401
 
 
-@pytest.mark.xfail(reason="Logout/refresh-token routes are not implemented")
 def test_logout_with_refresh_token_revokes_the_pair(client, register):
     email = "pair@example.com"
     headers = register(email)
@@ -62,7 +57,6 @@ def test_logout_with_refresh_token_revokes_the_pair(client, register):
     )
 
 
-@pytest.mark.xfail(reason="Refresh-token route is not implemented")
 def test_invalid_refresh_token_is_rejected(client):
     assert (
         client.post("/api/v1/auth/refresh", json={"refresh_token": "not-a-valid-token-value"}).status_code
@@ -71,7 +65,6 @@ def test_invalid_refresh_token_is_rejected(client):
     assert client.post("/api/v1/auth/refresh", json={}).status_code == 422
 
 
-@pytest.mark.xfail(reason="Password reset routes are not implemented")
 def test_password_reset_flow_revokes_existing_sessions(client, register):
     email = "reset@example.com"
     register(email)
@@ -114,14 +107,12 @@ def test_password_reset_flow_revokes_existing_sessions(client, register):
     )
 
 
-@pytest.mark.xfail(reason="Password reset routes are not implemented")
 def test_password_forgot_is_generic_for_unknown_email(client):
     response = client.post("/api/v1/auth/password/forgot", json={"email": "nobody@example.com"})
     assert response.status_code == 202
     assert response.json()["reset_token"] is None
 
 
-@pytest.mark.xfail(reason="Password reset routes are not implemented")
 def test_password_reset_rejects_bad_token(client):
     assert (
         client.post(

@@ -16,6 +16,7 @@ def generate_discriminator() -> str:
 
 
 if TYPE_CHECKING:
+    from app.models.auth import PasswordResetToken, RefreshToken, RevokedToken
     from app.models.moderation import Appeal
     from app.models.video import Video
 
@@ -45,3 +46,12 @@ class User(Base):
 
     videos: Mapped[list["Video"]] = relationship(back_populates="owner")
     appeals: Mapped[list["Appeal"]] = relationship(foreign_keys="[Appeal.user_id]", back_populates="user")
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    revoked_tokens: Mapped[list["RevokedToken"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
