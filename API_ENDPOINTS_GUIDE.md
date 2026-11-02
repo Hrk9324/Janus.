@@ -433,20 +433,20 @@ curl http://127.0.0.1:8000/api/v1/videos ^
 - Method: `GET`
 - Path: `/api/v1/feed`
 - Operation ID: `feed`
-- Full URL mẫu: `http://127.0.0.1:8000/api/v1/feed`
-- Chức năng: cursor pagination các video `published`, `public`, chưa bị xóa.
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/feed?limit=8`
+- Chức năng: Phân trang con trỏ (cursor pagination) danh sách video `published`, `public`, chưa bị xóa phục vụ giao diện xem video ngắn cuộn dọc.
 - Module: Video Management
 - Authentication: Không yêu cầu
 - Role/permission: Không có
 - Content-Type: Không có body
-- Trạng thái xác minh: **Đã test** — Video Management collection.
+- Trạng thái xác minh: **Đã test** — Video Management collection & Pytest.
 
 **A/B. Path và query parameters**
 
-| Tham số | Kiểu | Bắt buộc | Mặc định | Quy tắc |
+| Tham số | Kiểu | Bắt buộc | Mặc định | Quy tắc & Hợp đồng API |
 |---|---|---:|---:|---|
-| `limit` | integer | Không | `8` | `1..20`; backend lấy `limit + 1` để tính `has_more` |
-| `cursor` | ISO datetime/null | Không | `null` | Chỉ lấy video có `created_at` nhỏ hơn cursor |
+| `limit` | integer | Không | `8` | Giới hạn từ `1..20`. Hỗ trợ gọi các batch nhỏ (ví dụ `limit=2` hoặc `limit=3`) để tối ưu hóa sliding window (cửa sổ trượt DOM 3 phần tử) ở Frontend. Backend truy vấn `limit + 1` bản ghi để xác định cờ `has_more`. |
+| `cursor` | ISO datetime/null | Không | `null` | Chỉ lấy các video có thời gian `created_at` nhỏ hơn cursor (sắp xếp giảm dần theo thời gian tạo). |
 
 **C. Headers**: Không bắt buộc.
 
@@ -459,7 +459,7 @@ curl http://127.0.0.1:8000/api/v1/videos ^
   "items": [
     {
       "id": "00000000-0000-0000-0000-000000000002",
-      "caption": "Demo",
+      "caption": "Màn vũ đạo sôi động",
       "stream_url": "https://pub-example.r2.dev/videos/<video_id>.mp4",
       "thumbnail_url": "https://pub-example.r2.dev/thumbnails/<video_id>.jpg",
       "allow_comments": true,
@@ -471,21 +471,18 @@ curl http://127.0.0.1:8000/api/v1/videos ^
 }
 ```
 
-`thumbnail_url` có thể là `null` nếu thumbnail chưa tồn tại. `stream_url`
-trỏ trực tiếp tới CDN R2 khi dùng S3 storage và hỗ trợ Range Request. HTTP
-`200`; `items` có thể là `[]`.
+**Quy ước phân trang hữu hạn & Vòng lặp Client (Finite Pagination & Client Loop Contract):**
+- **Tại Backend:** Cơ sở dữ liệu lưu trữ hữu hạn. Khi người dùng cuộn đến trang cuối cùng, Backend sẽ trả về `has_more: false` và `next_cursor: null`.
+- **Hợp đồng với Frontend:** Khi nhận `has_more: false`, Frontend **tuyệt đối không được tiếp tục gửi request lên server** (tránh vòng lặp vô tận gây quá tải hạ tầng). Thay vào đó, Frontend sẽ duy trì danh sách video đã nạp vào client state và tự động quay vòng lại đầu danh sách (looping replay) để duy trì trải nghiệm lướt video ngắn vô tận như TikTok / YouTube Shorts.
+- `stream_url`: Trỏ trực tiếp tới CDN R2 khi dùng S3 storage và hỗ trợ Range Request, hoặc fallback về endpoint stream cục bộ `/api/v1/videos/{video_id}/stream`.
+- `thumbnail_url`: Có thể là `null` nếu thumbnail chưa được sinh xong.
 
-Frontend phải đọc `response.items` trước khi gọi `.map()` và dùng trực tiếp
-`item.stream_url`; không tự ghép `/api/v1/videos/{video_id}/stream` cho Feed.
-
-**F. Lỗi thường gặp**: lỗi kết nối database có thể gây `5xx`; không có lỗi
-nghiệp vụ riêng trong endpoint. `422` nếu `limit` ngoài `1..20` hoặc cursor
-không đúng định dạng.
+**F. Lỗi thường gặp**: Lỗi kết nối database có thể gây `5xx`; không có lỗi nghiệp vụ riêng trong endpoint. Trả về `422 Unprocessable Entity` nếu `limit` ngoài khoảng `1..20` hoặc `cursor` không đúng định dạng ISO 8601.
 
 **G. Ví dụ gọi API**
 
 ```bash
-curl http://127.0.0.1:8000/api/v1/feed
+curl http://127.0.0.1:8000/api/v1/feed?limit=8
 ```
 
 ### 3.7.1 Tìm kiếm video theo tag — Grid View
@@ -598,18 +595,18 @@ vào temporary directory cho AI và tự dọn temporary file sau khi xử lý.
 - Path: `/api/v1/videos/{video_id}/ai`
 - Operation ID: `ai_result`
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/videos/<video_id>/ai`
-- Chức năng: đọc AI job, transcript và labels.
+- Chức năng: Đọc tiến trình phân tích AI, transcript, nhãn kiểm duyệt và trạng thái cập nhật của video (hỗ trợ polling định kỳ 2 giây/lần ở client).
 - Module: AI Analysis
 - Authentication: Bắt buộc Bearer JWT
 - Role/permission: Owner, moderator hoặc admin.
 - Content-Type: Không có body
-- Trạng thái xác minh: **Đã test** — AI Analysis collection.
+- Trạng thái xác minh: **Đã test** — AI Analysis collection & Pytest integration.
 
 **A. Path parameters**
 
 | Tham số | Kiểu | Bắt buộc | Ý nghĩa |
 |---|---|---:|---|
-| `video_id` | UUID | Có | ID video cần đọc |
+| `video_id` | UUID | Có | ID video cần kiểm tra kết quả phân tích AI |
 
 **B. Query parameters**: Không có.
 
@@ -623,51 +620,75 @@ Authorization: Bearer <access_token>
 
 **E. Response mẫu**
 
-Khi NSFW-Detection chạy thật và phát hiện vi phạm Adult (video chuyển
-sang `pending_review`):
+Response Model: `AIResultResponse`
+
+Khi NSFW-Detection phát hiện vi phạm nhạy cảm (Adult):
 
 ```json
 {
   "video_id": "00000000-0000-0000-0000-000000000002",
   "job_status": "succeeded",
-  "transcript": "[NSFW-Detection] phán quyết: ADULT | độ tin cậy: 0.87 | anchor đã đánh giá: 12 | fps: 30.0\n[Speech-to-Text] chưa được triển khai — chưa có transcript âm thanh.",
+  "transcript": "[NSFW-Detection] phán quyết: ADULT | độ tin cậy: 0.73 | anchor đã đánh giá: 25 | fps: 30.0\n[Speech-to-Text] chưa được triển khai — chưa có transcript âm thanh.\n[Chưa triển khai] violence: bộ nhận diện Violence chưa được triển khai\n[Chưa triển khai] sound: bộ nhận diện Sound/Audio chưa được triển khai\n[Chưa triển khai] text: bộ nhận diện Text (Speech-to-Text + Text Analysis) chưa được triển khai",
   "labels": [
     {
       "name": "Adult",
-      "confidence": 0.87,
-      "level": "HIGH"
+      "confidence": 0.7337,
+      "level": "MEDIUM",
+      "source": "ai"
     }
-  ]
+  ],
+  "video_status": "rejected"
 }
 ```
 
-Khi môi trường AI chưa sẵn sàng và `AI_ANALYSIS_MODE=auto`, job ghi rõ lý do
-và dùng kết quả mock (đã xác minh runtime với Neon):
+Khi video an toàn (Safe):
 
 ```json
 {
-  "video_id": "00000000-0000-0000-0000-000000000002",
+  "video_id": "00000000-0000-0000-0000-000000000003",
   "job_status": "succeeded",
-  "transcript": "[NSFW-Detection chưa sẵn sàng: chưa cài thư viện: tensorflow, torch, cv2, numpy]\nMock transcript for development testing.",
+  "transcript": "[NSFW-Detection] phán quyết: NORMAL | độ tin cậy: 0.28 | anchor đã đánh giá: 30 | fps: 30.0",
   "labels": [
     {
       "name": "Safe",
-      "confidence": 0.95,
-      "level": "HIGH"
+      "confidence": 0.2844,
+      "level": "LOW",
+      "source": "ai"
     }
-  ]
+  ],
+  "video_status": "published"
 }
 ```
 
-HTTP `200`. Với `AI_ANALYSIS_MODE=required` và môi trường AI chưa sẵn sàng,
-`job_status` là `failed` và `job.error_message` chứa lý do.
+| Trường | Kiểu | Ý nghĩa |
+|---|---|---|
+| `video_id` | UUID | ID của video |
+| `job_status` | string | Trạng thái tiến trình AI: `"pending"` (chờ), `"running"` (đang chạy), `"succeeded"` (thành công), `"failed"` (thất bại) |
+| `transcript` | string/null | Chuỗi báo cáo chi tiết từ các module (thị giác, STT, các module mở rộng) |
+| `labels` | list[LabelResponse] | Danh sách nhãn kiểm duyệt kèm `name`, `confidence` (0.0..1.0), `level` (`LOW`/`MEDIUM`/`HIGH`), `source` (`ai`/`manual`) |
+| `video_status` | string/null | Trạng thái nghiệp vụ hiện tại của video: `"published"`, `"pending_review"`, `"rejected"`, `"processing"`, `"failed"` |
+
+**Vòng đời trạng thái Video & Ma trận phán quyết tự động của AI:**
+
+Sau khi tiến trình AI nền hoàn tất phân tích video, hệ thống tự động áp dụng ma trận phán quyết 3 trường hợp:
+1. **Trường hợp 1 - VI PHẠM RÕ RÀNG (Adult / High Risk / Confidence >= 0.85):**
+   - **Điều kiện:** Phát hiện nhãn `Adult` (không phân biệt chữ hoa/thường) HOẶC nhãn có `level == "HIGH"` HOẶC `confidence >= 0.85`.
+   - **Cập nhật:** `video.status = "rejected"`.
+   - **Hành động hệ thống:** Video bị loại bỏ hoàn toàn khỏi Feed công khai; tự động tạo bản ghi `ModerationReview` với lý do *"Tự động từ chối bởi hệ thống AI: Phát hiện nội dung vi phạm tiêu chuẩn (Adult)."*.
+2. **Trường hợp 2 - RANH GIỚI NGHI VẤN (Borderline / Medium Risk):**
+   - **Điều kiện:** Nhãn có `level == "MEDIUM"` HOẶC `0.4 <= confidence < 0.85` (đối với các nội dung nghi vấn nhưng chưa đủ ngưỡng tự động từ chối).
+   - **Cập nhật:** `video.status = "pending_review"`.
+   - **Hành động hệ thống:** Video tạm ẩn khỏi Feed công khai và chuyển vào Hàng đợi kiểm duyệt (Moderation Queue) chờ Moderator/Admin xem xét thủ công.
+3. **Trường hợp 3 - NỘI DUNG AN TOÀN (Safe / Low Risk):**
+   - **Điều kiện:** `report.is_safe` là `True` và không có bất kỳ nhãn rủi ro cao hoặc trung bình nào.
+   - **Cập nhật:** `video.status = "published"`.
+   - **Hành động hệ thống:** Tự động gắn nhãn `Safe` và xuất bản video ngay lập tức lên Feed công khai.
 
 **F. Lỗi thường gặp**
 
-- `401`: thiếu/sai JWT.
-- `404`: video không tồn tại, đã xóa hoặc không thuộc owner và caller không
-  phải moderator/admin.
-- `422`: `video_id` không phải UUID.
+- `401 Unauthorized`: Thiếu hoặc sai Bearer JWT token.
+- `404 Not Found`: Video không tồn tại, đã bị xóa mềm, hoặc video thuộc người khác mà người gọi không có quyền moderator/admin.
+- `422 Unprocessable Entity`: `video_id` không phải định dạng UUID hợp lệ.
 
 **G. Ví dụ gọi API**
 
@@ -792,12 +813,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/videos/<video_id>/reports ^
 - Path: `/api/v1/moderation/queue`
 - Operation ID: `moderation_queue`
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/moderation/queue`
-- Chức năng: liệt kê video `pending_review`, chưa bị xóa.
+- Chức năng: Liệt kê các video đang ở trạng thái `pending_review` (chờ duyệt) kèm dữ liệu tổng hợp giàu ngữ cảnh từ AI và báo cáo người dùng (UC012).
 - Module: Moderation
 - Authentication: Bắt buộc Bearer JWT
 - Role/permission: `moderator` hoặc `admin`.
 - Content-Type: Không có body
-- Trạng thái xác minh: **Đã test** — Moderation collection.
+- Trạng thái xác minh: **Đã test** — Test suite `test_labels_appeals_admin.py` & Pytest integration.
 
 **A/B. Path và query parameters**: Không có.
 
@@ -809,12 +830,63 @@ Authorization: Bearer <moderator_or_admin_token>
 
 **D. Request body**: Không có.
 
-**E. Response**: HTTP `200`, mảng `VideoResponse`; có thể là `[]`.
+**E. Response mẫu**
+
+Response Model: `list[ModerationQueueItemResponse]`
+
+```json
+[
+  {
+    "id": "96224541-e76c-4d10-bc56-607b07e103c1",
+    "original_filename": "dance_video.mp4",
+    "caption": "Màn nhảy sôi động",
+    "visibility": "public",
+    "allow_comments": true,
+    "size_bytes": 1348261,
+    "status": "pending_review",
+    "created_at": "2026-11-03T00:57:30Z",
+    "owner_name": "NguyenVanA",
+    "thumbnail_url": "https://pub-example.r2.dev/thumbnails/96224541-e76c-4d10-bc56-607b07e103c1.jpg",
+    "stream_url": "/api/v1/videos/96224541-e76c-4d10-bc56-607b07e103c1/stream",
+    "ai_status": "succeeded",
+    "labels": [
+      {
+        "name": "Suggestive",
+        "confidence": 0.55,
+        "level": "MEDIUM",
+        "source": "ai"
+      }
+    ],
+    "queue_reason": "AI nghi vấn vi phạm (Suggestive 55%)",
+    "report_count": 0
+  }
+]
+```
+
+**Bảng chi tiết các trường trong `ModerationQueueItemResponse`:**
+
+| Trường | Kiểu | Ý nghĩa |
+|---|---|---|
+| `id` | UUID | ID của video trong hàng đợi |
+| `original_filename` | string | Tên file gốc khi người dùng tải lên |
+| `caption` | string/null | Tiêu đề hoặc chú thích video |
+| `visibility` | string | Quyền xem: `"public"` hoặc `"private"` |
+| `allow_comments` | boolean | Cờ cho phép người xem bình luận |
+| `size_bytes` | integer | Kích thước video tính bằng byte |
+| `status` | string | Trạng thái hiện tại: luôn là `"pending_review"` |
+| `created_at` | ISO datetime | Thời điểm video được tải lên |
+| `owner_name` | string/null | Tên hiển thị của tác giả đăng tải |
+| `thumbnail_url` | string/null | URL ảnh thu nhỏ trích xuất từ khung hình đầu tiên của video |
+| `stream_url` | string/null | URL phát luồng trực tiếp phục vụ trình duyệt video của Moderator |
+| `ai_status` | string/null | Trạng thái tiến trình AI: `"succeeded"`, `"running"`, `"failed"`, `"pending"` |
+| `labels` | list[LabelResponse] | Danh sách nhãn do AI hoặc thủ công gán (kèm confidence, level, source) |
+| `queue_reason` | string | Lý do cụ thể video bị đưa vào hàng đợi (tổng hợp từ nhãn AI nghi vấn hoặc số lượt report) |
+| `report_count` | integer | Số lượng báo cáo mở (`open`) từ người dùng về video này |
 
 **F. Lỗi thường gặp**
 
-- `401`: thiếu/sai JWT.
-- `403`: user không có role moderator/admin.
+- `401 Unauthorized`: Thiếu hoặc sai Bearer JWT token.
+- `403 Forbidden`: Người dùng không có role `moderator` hoặc `admin`.
 
 **G. Ví dụ gọi API**
 
@@ -831,15 +903,14 @@ curl http://127.0.0.1:8000/api/v1/moderation/queue ^
 - Path: `/api/v1/moderation/videos/{video_id}/decision`
 - Operation ID: `moderation_decision`
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/moderation/videos/<video_id>/decision`
-- Chức năng: moderator/admin approve hoặc reject video.
+- Chức năng: Moderator/Admin phê duyệt (`approve`) hoặc từ chối (`reject`) video trong hàng đợi kiểm duyệt (UC014).
 - Module: Moderation
 - Authentication: Bắt buộc Bearer JWT
 - Role/permission: `moderator` hoặc `admin`.
 - Content-Type: `application/json`
-- Trạng thái xác minh: **Code/OpenAPI** — route/schema đã đối chiếu; chưa có
-  request Newman riêng cho endpoint này.
+- Trạng thái xác minh: **Đã test** — Test suite `test_labels_appeals_admin.py`.
 
-**A. Path parameters**: `video_id` — UUID, bắt buộc.
+**A. Path parameters**: `video_id` — UUID của video cần phán quyết, bắt buộc.
 
 **B. Query parameters**: Không có.
 
@@ -852,37 +923,48 @@ Content-Type: application/json
 
 **D. Request body**
 
+Request Model: `ModerationDecisionRequest`
+
 ```json
 {
-  "action": "approve",
-  "reason": "Review completed"
+  "action": "reject",
+  "reason": "Phát hiện nội dung nhạy cảm vi phạm tiêu chuẩn cộng đồng (Adult/Suggestive)."
 }
 ```
 
-| Trường | Kiểu | Bắt buộc | Giá trị |
+| Trường | Kiểu | Bắt buộc | Quy tắc & Ý nghĩa |
 |---|---|---:|---|
-| `action` | enum | Có | `approve` hoặc `reject` |
-| `reason` | string/null | Không | Tối đa 1000 ký tự; mặc định `null` |
+| `action` | enum | Có | Chỉ chấp nhận `"approve"` (duyệt đăng) hoặc `"reject"` (từ chối/gỡ bỏ) |
+| `reason` | string/null | Phụ thuộc | **QUY TẮC RÀNG BUỘC (SRS Luồng 4a.1):**<br>- Khi `action == "reject"`: `reason` **BẮT BUỘC** phải có và không được là chuỗi rỗng hoặc chỉ có khoảng trắng (tối đa 1000 ký tự). Nếu thiếu hoặc rỗng, API sẽ từ chối với HTTP `422 Unprocessable Entity` kèm thông báo *"Lý do từ chối là bắt buộc."*.<br>- Khi `action == "approve"`: `reason` là tùy chọn (`null` hoặc string). |
 
-`approve` chuyển video sang `published`; action khác hợp lệ là `reject`, chuyển
-sang `rejected`. Endpoint lưu `ModerationReview`.
+**Hành vi xử lý:**
+- Khi `action == "approve"`: `video.status` chuyển thành `published`, video xuất hiện ngay trên Feed công khai.
+- Khi `action == "reject"`: `video.status` chuyển thành `rejected`, video bị ẩn vĩnh viễn khỏi Feed.
+- Cả hai hành động đều tạo bản ghi `ModerationReview` lưu lại ID kiểm duyệt viên, hành động (`approve`/`reject`), lý do giải trình (`reason`), và thời gian xử lý.
 
-**E. Response**: HTTP `204 No Content`.
+**E. Response**: HTTP `204 No Content` (không có response body khi thành công).
 
 **F. Lỗi thường gặp**
 
-- `401`: thiếu/sai JWT.
-- `403`: không phải moderator/admin.
-- `404`: video không tồn tại hoặc đã xóa.
-- `422`: UUID hoặc action/reason sai schema.
+- `401 Unauthorized`: Thiếu hoặc sai Bearer JWT token.
+- `403 Forbidden`: Người gọi không có role `moderator` hoặc `admin`.
+- `404 Not Found`: Video không tồn tại hoặc đã bị xóa mềm (`is_deleted = true`).
+- `422 Unprocessable Entity`: UUID sai định dạng, `action` không hợp lệ, hoặc chọn `"reject"` nhưng bỏ trống trường `reason`.
 
 **G. Ví dụ gọi API**
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/moderation/videos/<video_id>/decision ^
-  -H "Authorization: Bearer <moderator_or_admin_token>" ^
+# Từ chối video (bắt buộc kèm reason)
+curl -X POST "http://127.0.0.1:8000/api/v1/moderation/videos/<video_id>/decision" ^
+  -H "Authorization: Bearer <moderator_token>" ^
   -H "Content-Type: application/json" ^
-  -d "{\"action\":\"approve\",\"reason\":\"Review completed\"}"
+  -d "{"action":"reject","reason":"Vi pham tieu chuan cong dong."}"
+
+# Phê duyệt video
+curl -X POST "http://127.0.0.1:8000/api/v1/moderation/videos/<video_id>/decision" ^
+  -H "Authorization: Bearer <moderator_token>" ^
+  -H "Content-Type: application/json" ^
+  -d "{"action":"approve"}"
 ```
 
 ### 3.13 Danh sách report mở
