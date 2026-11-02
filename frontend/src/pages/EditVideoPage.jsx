@@ -2,11 +2,21 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
+import { StatusBadge } from '@/shared/components/Feedback'
+import { VIDEO_STATUS_LABEL } from '@/shared/lib/format'
 import { fetchMyVideos, updateVideo } from '@/features/videos/api/videosApi'
+
+const STATUS_TABS = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'published', label: 'Đã phát' },
+  { id: 'pending', label: 'Chờ duyệt' },
+  { id: 'rejected', label: 'Bị từ chối' },
+]
 
 export default function EditVideoPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState('list')
+  const [activeTab, setActiveTab] = useState('all')
   const [videos, setVideos] = useState([])
   const [selectedVideo, setSelectedVideo] = useState(null)
   const [title, setTitle] = useState('')
@@ -45,6 +55,22 @@ export default function EditVideoPage() {
     }
   }
 
+  // Đếm số lượng video theo từng trạng thái
+  const counts = {
+    all: videos.length,
+    published: videos.filter((v) => v.status === 'published').length,
+    pending: videos.filter((v) => v.status === 'pending' || v.status === 'pending_review' || v.status === 'processing').length,
+    rejected: videos.filter((v) => v.status === 'rejected' || v.status === 'failed').length,
+  }
+
+  // Lọc danh sách video theo tab đang chọn
+  const filteredVideos = videos.filter((v) => {
+    if (activeTab === 'published') return v.status === 'published'
+    if (activeTab === 'pending') return v.status === 'pending' || v.status === 'pending_review' || v.status === 'processing'
+    if (activeTab === 'rejected') return v.status === 'rejected' || v.status === 'failed'
+    return true
+  })
+
   if (step === 'list') {
     return (
       <div className="page">
@@ -64,18 +90,41 @@ export default function EditVideoPage() {
             </div>
           </header>
           <div className="card-body">
+            {/* Cụm Tabs lọc trạng thái */}
+            <div className="card-tabs">
+              <div className="tabs" role="tablist">
+                {STATUS_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    className={activeTab === tab.id ? 'tab active' : 'tab'}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    {tab.label} ({counts[tab.id] ?? 0})
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {loading ? (
               <p>Đang tải danh sách video...</p>
+            ) : filteredVideos.length === 0 ? (
+              <p className="ai-empty">Không có video nào trong mục này.</p>
             ) : (
               <div className="video-list">
-                {videos.map((video) => (
+                {filteredVideos.map((video) => (
                   <button key={video.id} type="button" className="video-list-item" onClick={() => selectVideo(video)}>
                     <div className="video-list-thumb">
                       <Icon name="play" size={18} />
                     </div>
                     <div className="video-list-info">
                       <strong>{video.caption || video.original_filename || 'Video không tiêu đề'}</strong>
-                      <span>Chỉnh sửa</span>
+                      <span>Chỉnh sửa thông tin</span>
+                    </div>
+                    <div className="video-list-status">
+                      <StatusBadge status={video.status} label={VIDEO_STATUS_LABEL[video.status] || video.status} />
                     </div>
                   </button>
                 ))}

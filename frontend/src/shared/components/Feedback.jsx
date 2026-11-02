@@ -48,12 +48,27 @@ export function StatusBadge({ status, label }) {
   const tone =
     status === 'published'
       ? 'ok'
-      : status === 'pending_review' || status === 'processing'
+      : status === 'pending_review' || status === 'processing' || status === 'pending'
         ? 'warn'
         : status === 'rejected' || status === 'failed'
           ? 'danger'
           : 'neutral'
-  return <span className={`badge badge-${tone}`}>{label || status}</span>
+
+  const displayLabel =
+    label ||
+    (status === 'published'
+      ? 'Đã phát'
+      : status === 'pending_review' || status === 'pending'
+        ? 'Chờ duyệt'
+        : status === 'processing'
+          ? 'Đang xử lý'
+          : status === 'rejected'
+            ? 'Bị từ chối'
+            : status === 'failed'
+              ? 'Lỗi'
+              : status)
+
+  return <span className={`badge badge-${tone}`}>{displayLabel}</span>
 }
 
 export function ErrorNote({ children }) {
