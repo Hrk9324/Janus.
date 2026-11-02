@@ -8,7 +8,6 @@ import { useAuth } from '@/features/auth/AuthContext'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dành cho bạn', icon: 'home', end: true },
-  { to: '/edit-video', label: 'Chỉnh sửa video', icon: 'film', auth: true },
   { to: '/moderation', label: 'Kiểm duyệt', icon: 'shield', roles: ['moderator', 'admin'] },
 ]
 
@@ -80,6 +79,10 @@ export default function SideNav() {
             <NavLink to="/upload" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <Icon name="upload" size={18} />
               <span>Tải video</span>
+            </NavLink>
+            <NavLink to="/edit-video" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <Icon name="film" size={18} />
+              <span>Chỉnh sửa video</span>
             </NavLink>
             <NavLink to="/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <Icon name="user" size={18} />

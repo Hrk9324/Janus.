@@ -2,7 +2,7 @@
 .feed {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--topbar-height));
+  height: calc(100vh - var(--topbar-height) - 48px);
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   background: #000;
@@ -23,7 +23,7 @@
 .slide {
   position: relative;
   flex: 0 0 auto;
-  height: calc(100vh - var(--topbar-height));
+  height: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   display: grid;
@@ -240,7 +240,7 @@
   .feed,
   .feed-center,
   .slide {
-    height: calc(100vh - var(--topbar-height) - 64px);
+    height: calc(100dvh - var(--topbar-height) - 64px);
   }
 
   .slide-stage video {
@@ -479,6 +479,7 @@
   display: flex;
   flex-direction: column;
   height: calc(100vh - var(--topbar-height));
+  overflow: hidden;
 }
 
 .feed-page-header {
@@ -486,9 +487,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 24px;
+  padding: 10px 24px;
   border-bottom: 1px solid var(--line);
   background: rgba(0, 0, 0, 0.9);
+  flex-shrink: 0;
 }
 
 .feed-tabs {

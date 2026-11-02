@@ -40,13 +40,12 @@ export default function EditVideoPage() {
   if (step === 'list') {
     return (
       <div className="page">
-        <div className="page-head">
-          <div>
-            <span className="overline">Chỉnh sửa video</span>
-            <h1>Video của tôi</h1>
-            <p className="page-sub">Chọn video bạn đã tải lên để chỉnh sửa thông tin.</p>
-          </div>
+      <div className="page-head">
+        <div>
+          <h1>Video của tôi</h1>
+          <p className="page-sub">Chọn video bạn đã tải lên để chỉnh sửa thông tin.</p>
         </div>
+      </div>
 
         <section className="card">
           <header className="card-head">
@@ -79,7 +78,6 @@ export default function EditVideoPage() {
     <div className="page">
       <div className="page-head">
         <div>
-          <span className="overline">Chỉnh sửa video</span>
           <h1>Chỉnh sửa thông tin video</h1>
           <p className="page-sub">Cập nhật tiêu đề, mô tả và ảnh bìa cho "{selectedVideo?.title}".</p>
         </div>
