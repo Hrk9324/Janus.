@@ -1,6 +1,8 @@
 from app.schemas.admin import (
+    AdminAuditLogItem,
     AdminRoleUpdate,
     AdminStatsResponse,
+    AdminStatsSummary,
     AdminUserDetail,
     AdminUserStatusUpdate,
     AdminUserSummary,
@@ -64,8 +66,10 @@ from app.schemas.video import (
 
 __all__ = [
     "AIResultResponse",
+    "AdminAuditLogItem",
     "AdminRoleUpdate",
     "AdminStatsResponse",
+    "AdminStatsSummary",
     "AdminUserDetail",
     "AdminUserStatusUpdate",
     "AdminUserSummary",

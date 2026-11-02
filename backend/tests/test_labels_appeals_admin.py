@@ -406,3 +406,122 @@ def test_moderation_decision_reject_and_approve_success(client, register, seed_v
 
         refreshed2 = db.get(Video, video2.video_id)
         assert refreshed2.status is VideoStatus.published
+
+
+def test_admin_user_management_filters_and_banning(client, register):
+    admin = register("superadmin@example.com", role=UserRole.admin)
+    user1 = register("target-user1@example.com", role=UserRole.user)
+    mod1 = register("target-mod1@example.com", role=UserRole.moderator)
+    plain = register("unauth-user@example.com", role=UserRole.user)
+
+    # 1. Non-admin accessing admin users -> 403 Forbidden
+    assert client.get("/api/v1/admin/users", headers=plain).status_code == 403
+
+    # 2. Filter by role
+    users_resp = client.get("/api/v1/admin/users?role=user", headers=admin)
+    assert users_resp.status_code == 200
+    assert all(u["role"] == "user" for u in users_resp.json())
+
+    mods_resp = client.get("/api/v1/admin/users?role=moderator", headers=admin)
+    assert mods_resp.status_code == 200
+    assert any(u["email"] == "target-mod1@example.com" for u in mods_resp.json())
+
+    # 3. Filter by search
+    search_resp = client.get("/api/v1/admin/users?search=target-user1", headers=admin)
+    assert search_resp.status_code == 200
+    assert len(search_resp.json()) >= 1
+    target_id = search_resp.json()[0]["id"]
+
+    # 4. Ban user using status="banned"
+    ban_resp = client.patch(
+        f"/api/v1/admin/users/{target_id}/status",
+        json={"status": "banned"},
+        headers=admin,
+    )
+    assert ban_resp.status_code == 200
+    assert ban_resp.json()["is_active"] is False
+
+    # Target user token is now rejected
+    assert client.get("/api/v1/profile", headers=user1).status_code == 401
+
+    # Filter by is_active=false or status=banned
+    banned_list = client.get("/api/v1/admin/users?status=banned", headers=admin)
+    assert banned_list.status_code == 200
+    assert any(u["id"] == target_id for u in banned_list.json())
+
+    # 5. Unban user using status="active"
+    unban_resp = client.patch(
+        f"/api/v1/admin/users/{target_id}/status",
+        json={"status": "active"},
+        headers=admin,
+    )
+    assert unban_resp.status_code == 200
+    assert unban_resp.json()["is_active"] is True
+
+    # 6. Change role (Promote / Demote)
+    promote_resp = client.patch(
+        f"/api/v1/admin/users/{target_id}/role",
+        json={"role": "moderator"},
+        headers=admin,
+    )
+    assert promote_resp.status_code == 200
+    assert promote_resp.json()["role"] == "moderator"
+
+
+def test_admin_audit_logs_and_permissions(client, register, seed_video):
+    admin = register("audit-admin@example.com", role=UserRole.admin)
+    mod = register("audit-mod@example.com", role=UserRole.moderator)
+    plain = register("audit-user@example.com", role=UserRole.user)
+
+    # 1. Non-admin cannot access audit logs (403)
+    assert client.get("/api/v1/admin/audit-logs", headers=plain).status_code == 403
+    assert client.get("/api/v1/admin/audit-logs", headers=mod).status_code == 403
+
+    # 2. Moderator performs review action
+    video = seed_video(status=VideoStatus.pending_review, caption="Video audit log test")
+    url = f"/api/v1/moderation/videos/{video.video_id}/decision"
+    client.post(
+        url,
+        json={"action": "reject", "reason": "Vi phạm tiêu chuẩn audit log"},
+        headers=mod,
+    )
+
+    # 3. Admin queries audit logs
+    resp = client.get("/api/v1/admin/audit-logs", headers=admin)
+    assert resp.status_code == 200
+    logs = resp.json()
+    assert len(logs) >= 1
+    matched = next((l for l in logs if l["video_id"] == str(video.video_id)), None)
+    assert matched is not None
+    assert matched["action"] == "reject"
+    assert matched["reason"] == "Vi phạm tiêu chuẩn audit log"
+    assert matched["video_caption"] == "Video audit log test"
+    assert matched["moderator_name"] is not None
+
+    # 4. Filter by action
+    reject_logs = client.get("/api/v1/admin/audit-logs?action=reject", headers=admin).json()
+    assert all(l["action"] == "reject" for l in reject_logs)
+
+
+def test_admin_stats_and_overview_summary(client, register, seed_video):
+    admin = register("overview-admin@example.com", role=UserRole.admin)
+    plain = register("overview-user@example.com", role=UserRole.user)
+
+    # 1. Permission guard
+    assert client.get("/api/v1/admin/overview", headers=plain).status_code == 403
+
+    # 2. Overview / Stats returns enriched summary
+    resp = client.get("/api/v1/admin/overview?days=30", headers=admin)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "summary" in data
+    summary = data["summary"]
+    assert summary["total_users"] >= 1
+    assert "total_videos" in summary
+    assert "published_videos" in summary
+    assert "rejected_videos" in summary
+    assert "pending_videos" in summary
+    assert "pending_reports" in summary
+    assert "open_appeals" in summary
+    assert "ai_accuracy_rate" in summary
+    assert summary["ai_accuracy_rate"] >= 0.0

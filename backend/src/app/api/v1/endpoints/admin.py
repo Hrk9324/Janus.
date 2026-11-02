@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.dependencies import require_roles
 from app.models import User, UserRole, Video
 from app.schemas import (
+    AdminAuditLogItem,
     AdminRoleUpdate,
     AdminStatsResponse,
     AdminUserDetail,
@@ -27,10 +28,48 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 @router.get("/users", response_model=list[AdminUserSummary])
 def admin_list_users(
     search: str | None = None,
+    role: UserRole | None = None,
+    status: str | None = None,
+    is_active: bool | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
     user: User = Depends(require_roles(UserRole.admin)),
     db: Session = Depends(get_db),
 ) -> list[User]:
-    return admin_service.list_users(db, search)
+    if status is not None and is_active is None:
+        s = status.strip().lower()
+        if s in {"active", "unbanned"}:
+            is_active = True
+        elif s in {"banned", "inactive", "blocked"}:
+            is_active = False
+    return admin_service.list_users(
+        db=db,
+        search=search,
+        role=role,
+        is_active=is_active,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get("/audit-logs", response_model=list[AdminAuditLogItem])
+def admin_list_audit_logs(
+    action: str | None = None,
+    moderator_id: UUID | None = None,
+    video_id: UUID | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+    user: User = Depends(require_roles(UserRole.admin)),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    return admin_service.list_audit_logs(
+        db=db,
+        action=action,
+        moderator_id=moderator_id,
+        video_id=video_id,
+        skip=skip,
+        limit=limit,
+    )
 
 
 @router.get("/users/{user_id}", response_model=AdminUserDetail)
@@ -115,6 +154,7 @@ def admin_update_video_status(
     )
 
 
+@router.get("/overview", response_model=AdminStatsResponse)
 @router.get("/stats", response_model=AdminStatsResponse)
 def admin_get_stats(
     days: int = Query(default=30, ge=1),

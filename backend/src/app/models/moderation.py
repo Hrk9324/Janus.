@@ -25,6 +25,7 @@ class ModerationReview(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     video: Mapped[Video] = relationship(back_populates="moderation_reviews")
+    moderator: Mapped["User | None"] = relationship(foreign_keys=[moderator_id])
 
 
 class Report(Base):

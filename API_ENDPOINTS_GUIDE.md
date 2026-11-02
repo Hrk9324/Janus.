@@ -1075,27 +1075,43 @@ curl -X POST http://127.0.0.1:8000/api/v1/moderation/reports/<report_id>/decisio
 - Method: `GET`
 - Path: `/api/v1/admin/users`
 - Operation ID: `admin_list_users`
-- Full URL mẫu: `http://127.0.0.1:8000/api/v1/admin/users?search=Managed`
-- Chức năng: Admin xem danh sách user và tìm theo email/display name.
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/admin/users?role=user&status=active&search=Managed&skip=0&limit=50`
+- Chức năng: Admin xem danh sách user, tìm kiếm theo email/display name, lọc theo vai trò (`role`) và trạng thái hoạt động (`status`/`is_active`), hỗ trợ phân trang (`skip`, `limit`).
 - Module: Admin Management
 - Authentication: Bearer JWT
 - Role/permission: `admin`
-- Trạng thái xác minh: **Đã test** — Admin Management Newman.
+- Trạng thái xác minh: **Đã test** — Pytest `test_admin_user_management_filters_and_banning` & Admin Management Newman.
 
 **Parameters and headers**
 
-- Query `search`: string, không bắt buộc; tìm theo `email` hoặc `display_name`.
-- Không có path parameter hoặc request body.
+- Query parameters:
+  - `search`: string, không bắt buộc; tìm kiếm chuỗi trong `email` hoặc `display_name`.
+  - `role`: string enum (`user`, `moderator`, `admin`), không bắt buộc; lọc theo vai trò.
+  - `status`: string (`active`, `banned`), không bắt buộc; lọc theo trạng thái tài khoản.
+  - `is_active`: boolean (`true`, `false`), không bắt buộc; lọc theo cờ hoạt động.
+  - `skip`: integer (mặc định `0`, >= 0); offset phân trang.
+  - `limit`: integer (mặc định `50`, từ 1 đến 100); số bản ghi mỗi trang.
 - Header: `Authorization: Bearer <admin_token>`.
 
 **Response và lỗi**
 
-- HTTP `200`, mảng user summary gồm `id`, `display_name`, `role`, `is_active`,
-  `created_at`.
-- `401` token thiếu/sai hoặc user inactive; `403` không phải admin.
+- HTTP `200`, mảng user summary:
+  ```json
+  [
+    {
+      "id": "76628c89-63ff-4e78-958d-71b55c689ba4",
+      "display_name": "Người dùng mẫu",
+      "email": "user@example.com",
+      "role": "user",
+      "is_active": true,
+      "created_at": "2026-11-03T02:00:00Z"
+    }
+  ]
+  ```
+- `401 Unauthorized`: Token thiếu/sai hoặc user bị khóa; `403 Forbidden`: Người dùng không có vai trò `admin`.
 
 ```bash
-curl "http://127.0.0.1:8000/api/v1/admin/users?search=Managed" ^
+curl "http://127.0.0.1:8000/api/v1/admin/users?role=user&status=banned" ^
   -H "Authorization: Bearer <admin_token>"
 ```
 
@@ -1124,18 +1140,21 @@ curl http://127.0.0.1:8000/api/v1/admin/users/<user_id> ^
 - Authentication: Bearer JWT, role `admin`
 - Path `user_id`: UUID, bắt buộc.
 - Content-Type: `application/json`
-- Body: `{"is_active": false}` hoặc `{"is_active": true}`; `is_active` bắt buộc
-  là boolean.
+- Body: Hỗ trợ linh hoạt cả 2 định dạng:
+  - Boolean: `{"is_active": false}` (khóa) hoặc `{"is_active": true}` (mở khóa).
+  - String status: `{"status": "banned"}` (khóa) hoặc `{"status": "active"}` (mở khóa).
 - Response: HTTP `200`, user detail sau cập nhật.
-- Lỗi: `400` nếu admin tự khóa chính mình; `401`, `403`, `404`, `422` theo auth,
-  quyền, ID và schema.
-- Trạng thái xác minh: **Đã test** — Admin Management Newman.
+- Cơ chế bảo vệ & bảo mật:
+  - Khi tài khoản bị khóa (`is_active = false`), mọi request kèm token của user đó sẽ bị chặn ngay lập tức (HTTP `401 Unauthorized` "Tài khoản không hợp lệ").
+  - Admin không thể tự khóa chính mình (`403 Forbidden`).
+- Lỗi: `400` / `403` nếu admin tự khóa tài khoản của mình; `401`, `403`, `404`, `422` theo auth, quyền, ID và schema.
+- Trạng thái xác minh: **Đã test** — Pytest `test_admin_user_management_filters_and_banning`.
 
 ```bash
 curl -X PATCH http://127.0.0.1:8000/api/v1/admin/users/<user_id>/status ^
   -H "Authorization: Bearer <admin_token>" ^
   -H "Content-Type: application/json" ^
-  -d "{\"is_active\":false}"
+  -d "{"status":"banned"}"
 ```
 
 ### 3.18 Admin xem danh sách moderator
@@ -1176,6 +1195,61 @@ curl -X PATCH http://127.0.0.1:8000/api/v1/admin/users/<user_id>/role ^
   -H "Authorization: Bearer <admin_token>" ^
   -H "Content-Type: application/json" ^
   -d "{\"role\":\"moderator\"}"
+```
+
+### 3.19.1 Admin tra cứu nhật ký kiểm duyệt & kiểm toán hệ thống (Audit Logs)
+
+**Thông tin chung**
+
+- Method: `GET`
+- Path: `/api/v1/admin/audit-logs`
+- Operation ID: `admin_list_audit_logs`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/admin/audit-logs?action=reject&limit=20`
+- Chức năng: Admin tra cứu toàn bộ lịch sử các quyết định kiểm duyệt video trong hệ thống (ai thực hiện: moderator display name/email hoặc "Hệ thống AI", video nào: ID, tiêu đề, người đăng, quyết định: approve/reject, lý do xử lý vi phạm, thời gian quyết định).
+- Module: Admin Management & Audit
+- Authentication: Bearer JWT
+- Role/permission: `admin` (Kiểm duyệt viên thường hoặc người dùng bị từ chối với HTTP `403 Forbidden`).
+- Trạng thái xác minh: **Đã test** — Pytest `test_admin_audit_logs_and_permissions`.
+
+**Parameters and headers**
+
+- Query parameters:
+  - `action`: string (`approve`, `reject`), không bắt buộc; lọc theo hành vi phê duyệt hoặc từ chối.
+  - `moderator_id`: UUID, không bắt buộc; lọc theo ID của kiểm duyệt viên cụ thể.
+  - `video_id`: UUID, không bắt buộc; lọc theo video cụ thể.
+  - `skip`: integer (mặc định `0`, >= 0); offset phân trang.
+  - `limit`: integer (mặc định `50`, tối đa 100); số bản ghi mỗi trang.
+- Header: `Authorization: Bearer <admin_token>`.
+
+**Response JSON mẫu**
+
+- HTTP `200`:
+  ```json
+  [
+    {
+      "id": "c1f7b7e2-8924-42f4-a8c7-4c74a019488a",
+      "video_id": "90db1680-bc96-410a-b333-6cf7fa50ebc5",
+      "video_caption": "Video ngắn hướng dẫn",
+      "video_owner_id": "f51675c9-959c-4ee3-979d-da3e30f576e9",
+      "video_owner_name": "Tác giả video",
+      "moderator_id": "8bb38ce2-4753-488f-a9cb-b09a473ee16a",
+      "moderator_name": "Kiểm duyệt viên 01",
+      "moderator_email": "mod01@example.com",
+      "action": "reject",
+      "reason": "Vi phạm tiêu chuẩn cộng đồng về nội dung nhạy cảm",
+      "created_at": "2026-11-03T03:10:00Z"
+    }
+  ]
+  ```
+
+**Bảng mã lỗi**
+
+- `401 Unauthorized`: Chưa truyền token hoặc token hết hạn/không hợp lệ.
+- `403 Forbidden`: Người dùng không có vai trò `admin` (kể cả role `moderator` hay `user`).
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/admin/audit-logs?action=reject" ^
+  -H "Authorization: Bearer <admin_token>"
 ```
 
 ### 3.20 Phát video (stream)
@@ -1392,19 +1466,88 @@ curl -OJ http://127.0.0.1:8000/api/v1/videos/<video_id>/stream
 **Request body**: `{"status": "rejected", "reason": "Vi phạm quy chế"}` hoặc `{"status": "deleted"}`.  
 **Response**: HTTP `200 OK` với thông tin VideoResponse.
 
-### 3.29 Thống kê hệ thống (Admin - UC020)
+### 3.29 Thống kê hệ thống & tổng quan Dashboard (Admin - UC020)
 
 **Thông tin chung**
 
 - Method: `GET`
-- Path: `/api/v1/admin/stats`
+- Paths hỗ trợ đồng thời: `/api/v1/admin/stats` và `/api/v1/admin/overview`
 - Operation ID: `admin_get_stats`
-- Query parameters: `days` (mặc định 30, tối thiểu 1).
-- Chức năng: Thống kê số lượng video theo trạng thái, báo cáo theo trạng thái, khiếu nại theo trạng thái, tác vụ AI và khối lượng công việc của từng kiểm duyệt viên.
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/admin/overview?days=30`
+- Chức năng: Cung cấp số liệu thống kê toàn diện cho Admin Dashboard:
+  - Khối chỉ số tổng quan nhanh (`summary`): Tổng số người dùng, tổng số video, số video đã duyệt (`published`), số video bị từ chối (`rejected`), số video chờ duyệt (`pending_review`), số báo cáo chờ xử lý (`open`), số khiếu nại đang mở (`open`), tỷ lệ chính xác/thành công AI (`ai_accuracy_rate`).
+  - Khối chi tiết: Phân bố video theo trạng thái, báo cáo theo trạng thái, khiếu nại theo trạng thái, tác vụ AI và khối lượng công việc của từng kiểm duyệt viên.
 - Module: Admin Management
 - Authentication: Bearer JWT
-- Role/permission: `admin`
-- Trạng thái xác minh: **Đã test** — Pytest `test_moderator_and_system_stats`.
+- Role/permission: `admin` (người dùng khác nhận `403 Forbidden`).
+- Trạng thái xác minh: **Đã test** — Pytest `test_admin_stats_and_overview_summary` & `test_moderator_and_system_stats`.
+
+**Parameters and headers**
+
+- Query parameter: `days` (mặc định 30, tối thiểu 1); khoảng thời gian thống kê (ngày gần nhất).
+- Header: `Authorization: Bearer <admin_token>`.
+
+**Response JSON mẫu**
+
+- HTTP `200`:
+  ```json
+  {
+    "days": 30,
+    "summary": {
+      "total_users": 150,
+      "total_videos": 420,
+      "published_videos": 380,
+      "rejected_videos": 25,
+      "pending_videos": 15,
+      "pending_reports": 4,
+      "open_appeals": 2,
+      "ai_accuracy_rate": 98.5
+    },
+    "videos_by_status": {
+      "processing": 0,
+      "pending_review": 15,
+      "published": 380,
+      "rejected": 25,
+      "failed": 0,
+      "deleted": 5
+    },
+    "reports_by_status": {
+      "open": 4,
+      "resolved": 12,
+      "rejected": 3
+    },
+    "appeals_by_status": {
+      "open": 2,
+      "approved": 5,
+      "rejected": 8
+    },
+    "jobs_by_status": {
+      "pending": 0,
+      "running": 1,
+      "succeeded": 415,
+      "failed": 4
+    },
+    "moderator_workload": [
+      {
+        "moderator_id": "8bb38ce2-4753-488f-a9cb-b09a473ee16a",
+        "moderator_name": "Kiểm duyệt viên 01",
+        "reviews_count": 45,
+        "appeals_count": 8
+      }
+    ]
+  }
+  ```
+
+**Bảng mã lỗi**
+
+- `401 Unauthorized`: Chưa đăng nhập hoặc token không hợp lệ.
+- `403 Forbidden`: Không có vai trò `admin`.
+- `422 Unprocessable Entity`: Giá trị `days` nhỏ hơn 1 hoặc không phải số nguyên.
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/admin/overview?days=30" ^
+  -H "Authorization: Bearer <admin_token>"
+```
 
 ### 3.30 Thống kê hiệu suất Moderator (Admin - UC019)
 

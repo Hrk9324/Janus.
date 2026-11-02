@@ -18,6 +18,7 @@ class AdminUserSummary(BaseModel):
 
     id: UUID
     display_name: str
+    email: EmailStr | None = None
     role: UserRole
     is_active: bool
     created_at: datetime
@@ -25,10 +26,28 @@ class AdminUserSummary(BaseModel):
 
 class AdminUserDetail(AdminUserSummary):
     email: EmailStr
+    discriminator: str | None = None
+    bio: str | None = None
+    avatar_url: str | None = None
 
 
 class AdminUserStatusUpdate(BaseModel):
-    is_active: bool
+    is_active: bool | None = None
+    status: str | None = None
+
+    @model_validator(mode="after")
+    def validate_status_input(self) -> "AdminUserStatusUpdate":
+        if self.is_active is None and self.status is None:
+            raise ValueError("Cần cung cấp ít nhất một trường 'is_active' hoặc 'status'")
+        if self.status is not None and self.is_active is None:
+            s = self.status.strip().lower()
+            if s in {"active", "unbanned"}:
+                self.is_active = True
+            elif s in {"banned", "inactive", "blocked"}:
+                self.is_active = False
+            else:
+                raise ValueError("Trạng thái status không hợp lệ (chấp nhận 'active' hoặc 'banned')")
+        return self
 
 
 class AdminRoleUpdate(BaseModel):
@@ -83,6 +102,17 @@ class ModeratorWorkloadItem(BaseModel):
     appeals_count: int
 
 
+class AdminStatsSummary(BaseModel):
+    total_users: int = 0
+    total_videos: int = 0
+    published_videos: int = 0
+    rejected_videos: int = 0
+    pending_videos: int = 0
+    pending_reports: int = 0
+    open_appeals: int = 0
+    ai_accuracy_rate: float = 0.0
+
+
 class AdminStatsResponse(BaseModel):
     days: int
     videos_by_status: dict[str, int]
@@ -90,6 +120,23 @@ class AdminStatsResponse(BaseModel):
     appeals_by_status: dict[str, int]
     jobs_by_status: dict[str, int]
     moderator_workload: list[ModeratorWorkloadItem] = Field(default_factory=list)
+    summary: AdminStatsSummary | None = None
+
+
+class AdminAuditLogItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    video_id: UUID
+    video_caption: str | None = None
+    video_owner_id: UUID | None = None
+    video_owner_name: str | None = None
+    moderator_id: UUID | None = None
+    moderator_name: str | None = None
+    moderator_email: str | None = None
+    action: str | None = None
+    reason: str | None = None
+    created_at: datetime
 
 
 class ModeratorStatsResponse(BaseModel):
