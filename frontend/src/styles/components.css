@@ -454,3 +454,26 @@ textarea.text-input {
   font-size: 12px;
 }
 
+
+
+.report-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.report-options .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.report-options .checkbox-row input {
+  width: 16px;
+  height: 16px;
+}
+

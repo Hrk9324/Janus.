@@ -6,7 +6,7 @@ export function streamUrl(videoId) {
 }
 
 export function fetchFeed() {
-  return apiFetch('/v1/feed', { auth: false })
+  return apiFetch('/v1/feed', { auth: false }).then((res) => res?.items || res || [])
 }
 
 export function fetchMyVideos() {

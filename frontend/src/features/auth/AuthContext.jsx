@@ -25,7 +25,6 @@ export function AuthProvider({ children }) {
         if (!cancelled) setUser(profile)
       })
       .catch(() => {
-        // Token hết hạn hoặc không hợp lệ: dọn phiên để UI chuyển về trạng thái đăng nhập.
         if (!cancelled) {
           setToken(null)
           setUser(null)

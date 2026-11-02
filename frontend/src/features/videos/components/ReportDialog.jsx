@@ -57,7 +57,6 @@ export default function ReportDialog({ video, onClose, onReported }) {
       <div className="modal">
         <header className="modal-head">
           <div>
-            <p className="overline">Báo cáo</p>
             <h2>Báo cáo video này</h2>
           </div>
           <button type="button" className="icon-button" onClick={onClose}>Đóng</button>
@@ -78,7 +77,7 @@ export default function ReportDialog({ video, onClose, onReported }) {
               <textarea className="text-input textarea" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Mô tả cụ thể lý do báo cáo..." />
             </label>
           )}
-          <div className="field">
+          <div className="field report-options">
             <span>Tùy chọn bổ sung</span>
             <label className="checkbox-row">
               <input type="checkbox" checked={blockVideo} onChange={(e) => setBlockVideo(e.target.checked)} />
