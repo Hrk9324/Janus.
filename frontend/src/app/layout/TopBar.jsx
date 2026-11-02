@@ -8,6 +8,7 @@ const TITLES = {
   '/upload': 'Tải video',
   '/profile': 'Hồ sơ của bạn',
   '/moderation': 'Hàng đợi kiểm duyệt',
+  '/edit-video': 'Chỉnh sửa video',
 }
 
 export default function TopBar() {
