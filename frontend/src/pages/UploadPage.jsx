@@ -28,15 +28,14 @@ export default function UploadPage() {
   }
 
   return (
+    <div>
     <div className="page">
-      <div className="page-head">
-        <div>
-          <span className="overline">Tải video</span>
-          <h1>Tải video lên</h1>
-          <p className="page-sub">
-            Video được backend kiểm tra định dạng, lưu trữ và chạy phân tích AI nền. Kết quả hiển thị ngay bên dưới.
-          </p>
-        </div>
+      <div className="page-head" style={{ alignItems: 'center' }}>
+        <h1>Tải video lên</h1>
+        <p className="page-sub" style={{ marginTop: 0 }}>
+          Chọn file MP4, thêm caption và chờ hệ thống xử lý trước khi xuất bản.
+        </p>
+      </div>
         <span className="hint-chip">MP4 · tối đa 50 MB</span>
       </div>
 

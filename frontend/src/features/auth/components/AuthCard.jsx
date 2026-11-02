@@ -74,7 +74,7 @@ export default function AuthCard({ mode }) {
       <form className="auth-form" onSubmit={submit} noValidate>
         {isRegister && (
           <label className="field">
-            <span>Họ tên hiển thị</span>
+            <span>Username</span>
             <input
               className="text-input"
               value={form.displayName}
