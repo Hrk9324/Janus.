@@ -1,4 +1,5 @@
 import { useFeed } from '../hooks/useFeed'
+import { apiUrl } from '@/shared/api/client'
 import Icon from '@/shared/components/Icon'
 
 export default function FeedGrid() {
@@ -23,17 +24,23 @@ export default function FeedGrid() {
 
   return (
     <div className="feed-grid">
-      {videos.map((video) => (
-        <article key={video.id} className="feed-grid-card">
-          <div className="feed-grid-thumb">
-            <Icon name="play" size={22} />
-          </div>
-          <div className="feed-grid-meta">
-            <p className="feed-grid-title">{video.caption || 'Video không tiêu đề'}</p>
-            <span className="feed-grid-user">@{video.owner_name || 'janus'}</span>
-          </div>
-        </article>
-      ))}
+      {videos.map((video) => {
+        const src = video.stream_url ? apiUrl(video.stream_url) : video.thumbnail_url
+        return (
+          <article key={video.id} className="feed-grid-card">
+            <div className="feed-grid-thumb">
+              {src ? <video src={src} muted preload="metadata" /> : <div className="feed-grid-placeholder" />}
+              <div className="feed-grid-play">
+                <Icon name="play" size={14} />
+              </div>
+            </div>
+            <div className="feed-grid-meta">
+              <p className="feed-grid-title">{video.caption || video.original_filename || 'Video không tiêu đề'}</p>
+              <span className="feed-grid-user">@{video.owner_name || video.username || 'janus'}</span>
+            </div>
+          </article>
+        )
+      })}
     </div>
   )
 }
