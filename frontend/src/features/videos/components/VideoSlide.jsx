@@ -4,8 +4,20 @@ import Icon from '@/shared/components/Icon'
 import ReportDialog from './ReportDialog'
 import CommentDrawer from './CommentDrawer'
 
-/** Một video trong feed: bấm để phát/tạm dừng, có các hành động bên phải. */
-export default function VideoSlide({ video, onReported, shouldMountVideo = false, isActive = false }) {
+/**
+ * Một video slide trong feed dọc.
+ * Áp dụng cơ chế Cửa sổ trượt (Sliding Window):
+ * - Chỉ mount thẻ <video> cho video active (preload="auto") và video kế tiếp (preload="metadata").
+ * - Tất cả các video còn lại chỉ mount ảnh thumbnail <img src={thumbnail_url}> để tiết kiệm băng thông.
+ */
+export default function VideoSlide({
+  video,
+  index,
+  activeIndex,
+  shouldMountVideo,
+  isActive: propIsActive,
+  onReported,
+}) {
   const containerRef = useRef(null)
   const videoRef = useRef(null)
   const volumeRef = useRef(null)
@@ -18,6 +30,19 @@ export default function VideoSlide({ video, onReported, shouldMountVideo = false
   const [followed, setFollowed] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+
+  const isActive =
+    propIsActive !== undefined
+      ? propIsActive
+      : index !== undefined && activeIndex !== undefined
+      ? index === activeIndex
+      : false
+
+  const isNext =
+    index !== undefined && activeIndex !== undefined ? index === activeIndex + 1 : false
+
+  const canMount = shouldMountVideo !== undefined ? shouldMountVideo : isActive || isNext
+
   useEffect(() => {
     setPlaying(false)
     setLiked(false)
@@ -32,6 +57,44 @@ export default function VideoSlide({ video, onReported, shouldMountVideo = false
       videoRef.current.volume = 0.5
     }
   }, [video.id])
+
+  // Tự động phát khi slide trở thành active và dừng khi lướt sang video khác
+  useEffect(() => {
+    const element = videoRef.current
+    if (!element) return
+
+    if (isActive) {
+      element
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => {
+          // Trình duyệt chặn autoplay có tiếng -> chuyển muted rồi phát lại
+          if (!element.muted) {
+            element.muted = true
+            setMuted(true)
+            element.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+          } else {
+            setPlaying(false)
+          }
+        })
+    } else {
+      element.pause()
+      element.currentTime = 0
+      setPlaying(false)
+    }
+  }, [isActive])
+
+  useEffect(() => {
+    if (!canMount) setPlaying(false)
+  }, [canMount])
+
+  useEffect(() => {
+    function onChange() {
+      setFullscreen(Boolean(document.fullscreenElement))
+    }
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
 
   async function togglePlayback() {
     const element = videoRef.current
@@ -95,25 +158,18 @@ export default function VideoSlide({ video, onReported, shouldMountVideo = false
     el.requestFullscreen?.().then(() => setFullscreen(true)).catch(() => {})
   }
 
-  useEffect(() => {
-    if (!shouldMountVideo) setPlaying(false)
-  }, [shouldMountVideo])
-
-  useEffect(() => {
-    function onChange() {
-      setFullscreen(Boolean(document.fullscreenElement))
-    }
-    document.addEventListener('fullscreenchange', onChange)
-    return () => document.removeEventListener('fullscreenchange', onChange)
-  }, [])
-
   const viewCount = video.views || video.view_count || video.play_count || 0
   const likeCount = video.likes || video.like_count || 0
 
   return (
     <article className="slide" ref={containerRef}>
-      <button type="button" className="slide-stage" onClick={togglePlayback} aria-label="Phát hoặc tạm dừng video">
-        {shouldMountVideo ? (
+      <button
+        type="button"
+        className="slide-stage"
+        onClick={togglePlayback}
+        aria-label="Phát hoặc tạm dừng video"
+      >
+        {canMount ? (
           <video
             ref={videoRef}
             src={video.stream_url}
@@ -125,12 +181,27 @@ export default function VideoSlide({ video, onReported, shouldMountVideo = false
             onPause={() => setPlaying(false)}
           />
         ) : video.thumbnail_url ? (
-          <img src={video.thumbnail_url} alt={video.caption || 'Video'} className="slide-poster" />
+          <img
+            src={video.thumbnail_url}
+            alt={video.caption || 'Video thumbnail'}
+            className="slide-poster"
+            style={{
+              width: 'min(420px, 40vw)',
+              height: '100%',
+              objectFit: 'contain',
+              background: '#000',
+            }}
+            loading="lazy"
+          />
         ) : (
-          <div className="slide-poster placeholder" aria-label="Ảnh bìa chưa sẵn sàng" />
+          <div
+            className="slide-poster placeholder"
+            style={{ width: 'min(420px, 40vw)', height: '100%', background: '#000' }}
+            aria-label="Ảnh bìa chưa sẵn sàng"
+          />
         )}
         {!playing && (
-          <span className="slide-play">
+          <span className="slide-play" style={!canMount ? { opacity: 0.65 } : undefined}>
             <Icon name="play" size={26} />
           </span>
         )}
@@ -139,7 +210,11 @@ export default function VideoSlide({ video, onReported, shouldMountVideo = false
       <div className="slide-meta">
         <div className="slide-user-row">
           <span className="slide-user">@{video.owner_name || 'janus'}</span>
-          <button type="button" className={`slide-follow ${followed ? 'active' : ''}`} onClick={() => setFollowed((v) => !v)}>
+          <button
+            type="button"
+            className={`slide-follow ${followed ? 'active' : ''}`}
+            onClick={() => setFollowed((v) => !v)}
+          >
             {followed ? 'Đang theo dõi' : 'Theo dõi'}
           </button>
         </div>
@@ -151,11 +226,21 @@ export default function VideoSlide({ video, onReported, shouldMountVideo = false
       </div>
 
       <div className="slide-actions">
-        <button type="button" className={`rail-button ${liked ? 'active' : ''}`} onClick={() => setLiked((v) => !v)} aria-label="Thích">
+        <button
+          type="button"
+          className={`rail-button ${liked ? 'active' : ''}`}
+          onClick={() => setLiked((v) => !v)}
+          aria-label="Thích"
+        >
           <Icon name={liked ? 'heart-filled' : 'heart'} size={22} />
           <span>{(likeCount + (liked ? 1 : 0)).toLocaleString('vi-VN')}</span>
         </button>
-        <button type="button" className="rail-button" aria-label="Bình luận" onClick={() => setShowComments(true)}>
+        <button
+          type="button"
+          className="rail-button"
+          aria-label="Bình luận"
+          onClick={() => setShowComments(true)}
+        >
           <Icon name="message" size={22} />
           <span>Bình luận</span>
         </button>
@@ -182,30 +267,59 @@ export default function VideoSlide({ video, onReported, shouldMountVideo = false
             <Icon name={muted || volume === 0 ? 'mute' : 'volume'} size={22} />
             <span>{muted || volume === 0 ? 'Bật tiếng' : 'Âm lượng'}</span>
           </button>
-          <div className={`volume-slider ${showVolume ? 'visible' : ''}`} onMouseEnter={() => setShowVolume(true)} onMouseLeave={() => {
-            window.setTimeout(() => {
-              const wrapper = volumeRef.current
-              if (!wrapper) return
-              if (!wrapper.matches(':hover')) {
-                setShowVolume(false)
-              }
-            }, 120)
-          }}>
-            <input type="range" min="0" max="1" step="0.01" value={muted ? 0 : volume} onChange={changeVolume} />
+          <div
+            className={`volume-slider ${showVolume ? 'visible' : ''}`}
+            onMouseEnter={() => setShowVolume(true)}
+            onMouseLeave={() => {
+              window.setTimeout(() => {
+                const wrapper = volumeRef.current
+                if (!wrapper) return
+                if (!wrapper.matches(':hover')) {
+                  setShowVolume(false)
+                }
+              }, 120)
+            }}
+          >
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={muted ? 0 : volume}
+              onChange={changeVolume}
+            />
           </div>
         </div>
-        <button type="button" className="rail-button" onClick={toggleFullscreen} aria-label={fullscreen ? 'Thu nhỏ' : 'Phóng to'}>
+        <button
+          type="button"
+          className="rail-button"
+          onClick={toggleFullscreen}
+          aria-label={fullscreen ? 'Thu nhỏ' : 'Phóng to'}
+        >
           <Icon name="expand" size={22} />
           <span>{fullscreen ? 'Thu nhỏ' : 'Phóng to'}</span>
         </button>
-        <button type="button" className="rail-button" onClick={() => setReporting(true)} aria-label="Báo cáo">
+        <button
+          type="button"
+          className="rail-button"
+          onClick={() => setReporting(true)}
+          aria-label="Báo cáo"
+        >
           <Icon name="flag" size={22} />
           <span>Báo cáo</span>
         </button>
       </div>
 
-      {reporting && <ReportDialog video={video} onClose={() => setReporting(false)} onReported={onReported} />}
-      {showComments && <CommentDrawer video={video} onClose={() => setShowComments(false)} />}
+      {reporting && (
+        <ReportDialog
+          video={video}
+          onClose={() => setReporting(false)}
+          onReported={onReported}
+        />
+      )}
+      {showComments && (
+        <CommentDrawer video={video} onClose={() => setShowComments(false)} />
+      )}
     </article>
   )
 }

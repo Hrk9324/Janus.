@@ -4,7 +4,11 @@ import { EmptyState, ErrorNote, Spinner } from '@/shared/components/Feedback'
 import { useFeed } from '../hooks/useFeed'
 import VideoSlide from './VideoSlide'
 
-/** Feed dọc kiểu TikTok: mỗi video chiếm trọn khung, cuộn snap giữa các video. */
+/**
+ * Feed cuộn dọc toàn màn hình kiểu TikTok (Snap-scrolling).
+ * Áp dụng cơ chế Cửa sổ trượt (Sliding Window): Chỉ mount video cho slide đang xem
+ * và slide kế tiếp để tiết kiệm băng thông và tài nguyên giải mã media.
+ */
 export default function VideoFeed() {
   const { videos, loading, error, refresh } = useFeed()
   const containerRef = useRef(null)
@@ -19,17 +23,34 @@ export default function VideoFeed() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
             const index = slides.indexOf(entry.target)
             if (index >= 0) setActiveIndex(index)
           }
         })
       },
-      { root: container, threshold: [0.6] },
+      { root: container, threshold: [0.5, 0.75] },
     )
 
     slides.forEach((slide) => observer.observe(slide))
-    return () => observer.disconnect()
+
+    // Bắt thêm sự kiện scroll để cập nhật tức thời khi người dùng vuốt nhanh
+    const handleScroll = () => {
+      const slideHeight = container.clientHeight
+      if (slideHeight > 0) {
+        const index = Math.round(container.scrollTop / slideHeight)
+        if (index >= 0 && index < slides.length) {
+          setActiveIndex(index)
+        }
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      container.removeEventListener('scroll', handleScroll)
+    }
   }, [videos])
 
   if (loading) {
@@ -75,16 +96,21 @@ export default function VideoFeed() {
           <VideoSlide
             key={video.id}
             video={video}
-            onReported={refresh}
+            index={index}
+            activeIndex={activeIndex}
             shouldMountVideo={index === activeIndex || index === activeIndex + 1}
             isActive={index === activeIndex}
+            onReported={refresh}
           />
         ))}
       </div>
       {videos.length > 1 && (
         <div className="feed-progress">
           {videos.map((_, index) => (
-            <span key={index} className={`feed-progress-dot ${index === activeIndex ? 'active' : ''}`} />
+            <span
+              key={index}
+              className={`feed-progress-dot ${index === activeIndex ? 'active' : ''}`}
+            />
           ))}
         </div>
       )}
