@@ -11,9 +11,12 @@ from app.dependencies import current_user, optional_user
 from app.models import User, Video
 from app.schemas import (
     AIResultResponse,
+    AppealCreate,
+    AppealResponse,
     ConfirmLabelsRequest,
     FeedResponse,
     LabelResponse,
+    ReplaceVideoLabelsRequest,
     ReportCreate,
     ReportResponse,
     SearchTagResponse,
@@ -74,7 +77,7 @@ def feed(
 @router.get("/videos/search", response_model=SearchTagResponse)
 def search_videos(
     tag: str = Query(..., min_length=1),
-    limit: int = Query(default=12, ge=1, le=20),  # noqa: B008
+    limit: int = Query(default=12, ge=1, le=20),
     cursor: datetime | None = Query(default=None),  # noqa: B008
     db: Session = Depends(get_db),
 ) -> SearchTagResponse:
@@ -107,6 +110,16 @@ def labels(
     return video_label_service.list_video_labels(db, video_id, user)
 
 
+@router.patch("/videos/{video_id}/labels", response_model=list[LabelResponse])
+def replace_labels(
+    video_id: UUID,
+    payload: ReplaceVideoLabelsRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> list[LabelResponse]:
+    return video_label_service.replace_video_labels(db, video_id, user, payload)
+
+
 @router.post(
     "/videos/{video_id}/labels/confirm",
     response_model=VideoLabelsResponse,
@@ -118,6 +131,20 @@ def confirm_labels(
     db: Session = Depends(get_db),
 ) -> VideoLabelsResponse:
     return video_label_service.confirm_video_labels(db, video_id, user, payload)
+
+
+@router.post(
+    "/videos/{video_id}/appeals",
+    response_model=AppealResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_appeal(
+    video_id: UUID,
+    payload: AppealCreate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> AppealResponse:
+    return moderation_service.create_appeal(db, video_id, user, payload.reason)
 
 
 @router.get("/videos/{video_id}/stream", response_model=None)

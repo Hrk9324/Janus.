@@ -2,7 +2,6 @@
 
 from uuid import UUID
 
-import pytest
 from sqlalchemy import select
 
 from app.db.session import SessionLocal
@@ -92,7 +91,6 @@ def test_confirm_labels_validates_names(client, login, seed_video):
     assert [label["name"] for label in duplicate.json()["labels"]] == ["Safe"]
 
 
-@pytest.mark.xfail(reason="Moderator label replacement route is not implemented")
 def test_moderator_replaces_labels_and_owner_cannot(client, register, login, seed_video):
     ensure_label("Adult")
     ensure_label("Safe")
@@ -121,7 +119,6 @@ def test_moderator_replaces_labels_and_owner_cannot(client, register, login, see
     assert response.json()[0]["confidence"] == 0.9
 
 
-@pytest.mark.xfail(reason="Admin label CRUD routes are not implemented")
 def test_admin_label_crud(client, register):
     admin = register("label-admin@example.com", role=UserRole.admin)
 
@@ -163,7 +160,6 @@ def test_admin_label_crud(client, register):
     assert client.get("/api/v1/admin/labels", headers=plain_user).status_code == 403
 
 
-@pytest.mark.xfail(reason="Admin video status route is not implemented")
 def test_admin_updates_video_status_with_soft_delete(client, register, seed_video):
     admin = register("video-admin@example.com", role=UserRole.admin)
     video = seed_video(status=VideoStatus.published)
@@ -176,7 +172,7 @@ def test_admin_updates_video_status_with_soft_delete(client, register, seed_vide
     deleted = client.patch(url, json={"status": "deleted"}, headers=admin)
     assert deleted.status_code == 200
     assert deleted.json()["status"] == "deleted"
-    assert client.get("/api/v1/feed").json() == []
+    assert client.get("/api/v1/feed").json()["items"] == []
     # Đã xóa mềm thì không thấy nữa.
     assert client.patch(url, json={"status": "published"}, headers=admin).status_code == 404
 
@@ -199,7 +195,6 @@ def test_admin_updates_video_status_with_soft_delete(client, register, seed_vide
     )
 
 
-@pytest.mark.xfail(reason="Appeal routes are not implemented")
 def test_appeal_lifecycle(client, register, login, seed_video):
     admin = register("appeal-admin@example.com", role=UserRole.admin)
     video = seed_video(status=VideoStatus.rejected)
@@ -274,7 +269,6 @@ def test_appeal_lifecycle(client, register, login, seed_video):
     )
 
 
-@pytest.mark.xfail(reason="Appeal routes are not implemented")
 def test_appeal_rejected_keeps_video_hidden(client, register, login, seed_video):
     moderator = register("appeal-mod@example.com", role=UserRole.moderator)
     video = seed_video(status=VideoStatus.rejected)
@@ -299,7 +293,6 @@ def test_appeal_rejected_keeps_video_hidden(client, register, login, seed_video)
         assert refreshed.status is VideoStatus.rejected
 
 
-@pytest.mark.xfail(reason="Statistics routes are not implemented")
 def test_moderator_and_system_stats(client, register):
     admin = register("stats-admin@example.com", role=UserRole.admin)
     plain = register("stats-user@example.com")

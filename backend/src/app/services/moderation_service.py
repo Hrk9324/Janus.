@@ -1,12 +1,14 @@
-"""Nghiệp vụ báo cáo và kiểm duyệt."""
+"""Nghiệp vụ báo cáo, khiếu nại và kiểm duyệt."""
 
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.exceptions import ConflictError, NotFoundError
+from app.exceptions import ConflictError, InvalidInputError, NotFoundError
 from app.models import (
+    Appeal,
+    AppealStatus,
     ModerationAction,
     ModerationReview,
     Report,
@@ -14,6 +16,7 @@ from app.models import (
     User,
     Video,
     VideoStatus,
+    utcnow,
 )
 
 
@@ -91,6 +94,82 @@ def decide_report(db: Session, report_id: UUID, moderator: User, action: Moderat
             moderator_id=moderator.id,
             action=action,
             reason=reason,
+        )
+    )
+    db.commit()
+
+
+def create_appeal(db: Session, video_id: UUID, user: User, reason: str) -> Appeal:
+    """Chủ video gửi khiếu nại đối với video bị từ chối (UC011)."""
+    video = db.get(Video, video_id)
+    if video is None or video.is_deleted or video.owner_id != user.id:
+        raise NotFoundError("Không tìm thấy video")
+    if video.status != VideoStatus.rejected:
+        raise InvalidInputError("Chỉ có thể khiếu nại video đã bị từ chối")
+    existing_open = db.scalar(
+        select(Appeal).where(
+            Appeal.video_id == video_id,
+            Appeal.status == AppealStatus.open,
+        )
+    )
+    if existing_open is not None:
+        raise ConflictError("Video này đã có khiếu nại đang chờ xử lý")
+
+    appeal = Appeal(
+        video_id=video_id,
+        user_id=user.id,
+        reason=reason,
+        status=AppealStatus.open,
+    )
+    db.add(appeal)
+    db.commit()
+    db.refresh(appeal)
+    return appeal
+
+
+def list_appeals(db: Session, status: AppealStatus | None = AppealStatus.open) -> list[Appeal]:
+    """Lấy danh sách các khiếu nại (mặc định các khiếu nại đang mở) (UC017)."""
+    query = select(Appeal).options(selectinload(Appeal.user))
+    if status is not None:
+        query = query.where(Appeal.status == status)
+    query = query.order_by(Appeal.created_at.desc())
+    return list(db.scalars(query))
+
+
+def decide_appeal(
+    db: Session,
+    appeal_id: UUID,
+    moderator: User,
+    action: ModerationAction,
+    reason: str | None,
+) -> None:
+    """Xử lý phán quyết khiếu nại (UC017)."""
+    appeal = db.get(Appeal, appeal_id)
+    if appeal is None:
+        raise NotFoundError("Không tìm thấy khiếu nại")
+    if appeal.status != AppealStatus.open:
+        raise ConflictError("Khiếu nại đã được xử lý")
+
+    video = db.get(Video, appeal.video_id)
+    if video is None or video.is_deleted:
+        raise NotFoundError("Không tìm thấy video liên quan")
+
+    if action == ModerationAction.approve:
+        appeal.status = AppealStatus.approved
+        video.status = VideoStatus.published
+    else:
+        appeal.status = AppealStatus.rejected
+
+    appeal.moderator_id = moderator.id
+    appeal.decision_reason = reason
+    appeal.decided_at = utcnow()
+
+    db.add(
+        ModerationReview(
+            video_id=video.id,
+            moderator_id=moderator.id,
+            action=action,
+            reason=f"Phán quyết khiếu nại: {reason}" if reason else "Phán quyết khiếu nại",
         )
     )
     db.commit()

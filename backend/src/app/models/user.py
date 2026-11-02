@@ -16,6 +16,7 @@ def generate_discriminator() -> str:
 
 
 if TYPE_CHECKING:
+    from app.models.moderation import Appeal
     from app.models.video import Video
 
 
@@ -43,3 +44,4 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     videos: Mapped[list["Video"]] = relationship(back_populates="owner")
+    appeals: Mapped[list["Appeal"]] = relationship(foreign_keys="[Appeal.user_id]", back_populates="user")

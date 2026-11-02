@@ -1,24 +1,28 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum as SqlEnum,
     Float,
     ForeignKey,
-    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
-    text,
+)
+from sqlalchemy import (
+    Enum as SqlEnum,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, utcnow
 from app.models.enums import JobStatus, LabelSource, VideoStatus, VideoVisibility
 from app.models.user import User
+
+if TYPE_CHECKING:
+    from app.models.moderation import Appeal, ModerationReview, Report
 
 
 class Video(Base):
@@ -57,6 +61,9 @@ class Video(Base):
     reports: Mapped[list["Report"]] = relationship(back_populates="video")
     moderation_reviews: Mapped[list["ModerationReview"]] = relationship(
         back_populates="video"
+    )
+    appeals: Mapped[list["Appeal"]] = relationship(
+        back_populates="video", cascade="all, delete-orphan"
     )
 
     @property

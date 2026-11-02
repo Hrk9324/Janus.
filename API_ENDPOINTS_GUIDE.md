@@ -1135,6 +1135,208 @@ curl -X PATCH http://127.0.0.1:8000/api/v1/admin/users/<user_id>/role ^
 curl -OJ http://127.0.0.1:8000/api/v1/videos/<video_id>/stream
 ```
 
+### 3.21 Gửi khiếu nại video (Appeals - UC011)
+
+**Thông tin chung**
+
+- Method: `POST`
+- Path: `/api/v1/videos/{video_id}/appeals`
+- Operation ID: `create_appeal`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/videos/<video_id>/appeals`
+- Chức năng: Chủ sở hữu video gửi khiếu nại yêu cầu xem xét lại đối với video bị từ chối (`rejected`). Chống trùng lặp khiếu nại đang mở.
+- Module: Video Management / Moderation
+- Authentication: Bearer JWT
+- Role/permission: Chủ sở hữu (`owner`) của video.
+- Trạng thái xác minh: **Đã test** — Pytest `test_appeal_lifecycle`.
+
+**A/B. Path và query parameters**: path `video_id` (UUID). Không có query.
+
+**C. Headers**: `Authorization: Bearer <owner_token>`, `Content-Type: application/json`.
+
+**D. Request body**:
+
+```json
+{
+  "reason": "Nội dung video không vi phạm tiêu chuẩn cộng đồng, xin xem xét lại."
+}
+```
+
+**E. Response**: HTTP `201 Created`
+
+```json
+{
+  "id": "11111111-2222-3333-4444-555555555555",
+  "video_id": "99999999-8888-7777-6666-555555555555",
+  "user_id": "00000000-1111-2222-3333-444444444444",
+  "reason": "Nội dung video không vi phạm tiêu chuẩn cộng đồng, xin xem xét lại.",
+  "status": "open",
+  "moderator_id": null,
+  "decision_reason": null,
+  "created_at": "2026-11-02T12:00:00Z",
+  "decided_at": null,
+  "user_display_name": null
+}
+```
+
+**F. Lỗi thường gặp**:
+- `400`: Video chưa bị từ chối (không ở trạng thái `rejected`).
+- `404`: Video không tồn tại hoặc người gọi không phải chủ sở hữu.
+- `409`: Video đã có khiếu nại đang chờ xử lý (`open`).
+
+### 3.22 Hàng đợi duyệt khiếu nại (Moderator/Admin - UC017)
+
+**Thông tin chung**
+
+- Method: `GET`
+- Path: `/api/v1/moderation/appeals`
+- Operation ID: `moderation_appeals`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/moderation/appeals`
+- Chức năng: Kiểm duyệt viên hoặc Quản trị viên xem danh sách các khiếu nại đang mở.
+- Module: Moderation
+- Authentication: Bearer JWT
+- Role/permission: `moderator` hoặc `admin`.
+- Trạng thái xác minh: **Đã test** — Pytest `test_appeal_lifecycle`.
+
+**Response**: HTTP `200 OK`, mảng các đối tượng khiếu nại kèm `user_display_name`.
+
+### 3.23 Phán quyết khiếu nại (Moderator/Admin - UC017)
+
+**Thông tin chung**
+
+- Method: `POST`
+- Path: `/api/v1/moderation/appeals/{appeal_id}/decision`
+- Operation ID: `appeal_decision`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/moderation/appeals/<appeal_id>/decision`
+- Chức năng: Phê duyệt (`approve` -> chuyển video sang `published`) hoặc bác bỏ (`reject` -> video giữ nguyên `rejected`) khiếu nại kèm lý do và ghi nhận audit log.
+- Module: Moderation
+- Authentication: Bearer JWT
+- Role/permission: `moderator` hoặc `admin`.
+- Trạng thái xác minh: **Đã test** — Pytest `test_appeal_lifecycle`, `test_appeal_rejected_keeps_video_hidden`.
+
+**Request body**:
+
+```json
+{
+  "action": "approve",
+  "reason": "Video hợp lệ sau khi kiểm tra lại"
+}
+```
+
+**Response**: HTTP `204 No Content`.
+
+### 3.24 Moderator thay thế nhãn video (UC015)
+
+**Thông tin chung**
+
+- Method: `PATCH`
+- Path: `/api/v1/videos/{video_id}/labels`
+- Operation ID: `replace_labels`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/videos/<video_id>/labels`
+- Chức năng: Kiểm duyệt viên / Admin can thiệp ghi đè toàn bộ danh sách nhãn của video.
+- Module: Moderation / Label Management
+- Authentication: Bearer JWT
+- Role/permission: `moderator` hoặc `admin` (Owner trả về 403).
+- Trạng thái xác minh: **Đã test** — Pytest `test_moderator_replaces_labels_and_owner_cannot`.
+
+**Request body**:
+
+```json
+{
+  "labels": [
+    {"name": "Adult", "confidence": 0.9}
+  ]
+}
+```
+
+**Response**: HTTP `200 OK`, danh sách nhãn mới đã cập nhật.
+
+### 3.25 Quản trị nhãn nội dung: Tạo nhãn (Admin)
+
+**Thông tin chung**
+
+- Method: `POST`
+- Path: `/api/v1/admin/labels`
+- Operation ID: `admin_create_label`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/admin/labels`
+- Chức năng: Quản trị viên tạo mới nhãn chuẩn trong hệ thống. Chống trùng tên không phân biệt hoa thường.
+- Module: Admin Management
+- Authentication: Bearer JWT
+- Role/permission: `admin`
+- Trạng thái xác minh: **Đã test** — Pytest `test_admin_label_crud`.
+
+**Request body**: `{"name": "Violence"}`  
+**Response**: HTTP `201 Created` kèm `video_count: 0`.
+
+### 3.26 Quản trị nhãn nội dung: Danh sách nhãn (Admin)
+
+**Thông tin chung**
+
+- Method: `GET`
+- Path: `/api/v1/admin/labels`
+- Operation ID: `admin_list_labels`
+- Chức năng: Quản trị viên xem toàn bộ nhãn hệ thống kèm số video đang được gán nhãn đó.
+- Module: Admin Management
+- Authentication: Bearer JWT
+- Role/permission: `admin`
+- Trạng thái xác minh: **Đã test** — Pytest `test_admin_label_crud`.
+
+### 3.27 Quản trị nhãn nội dung: Sửa/Vô hiệu hóa nhãn (Admin)
+
+**Thông tin chung**
+
+- Method: `PATCH`
+- Path: `/api/v1/admin/labels/{label_id}`
+- Operation ID: `admin_update_label`
+- Chức năng: Quản trị viên đổi tên hoặc bật/tắt kích hoạt nhãn (`is_active`). Yêu cầu cung cấp ít nhất 1 trường (tránh body rỗng 422).
+- Module: Admin Management
+- Authentication: Bearer JWT
+- Role/permission: `admin`
+- Trạng thái xác minh: **Đã test** — Pytest `test_admin_label_crud`.
+
+### 3.28 Quản trị cập nhật trạng thái video (Admin)
+
+**Thông tin chung**
+
+- Method: `PATCH`
+- Path: `/api/v1/admin/videos/{video_id}/status`
+- Operation ID: `admin_update_video_status`
+- Chức năng: Admin can thiệp trạng thái video (`published`, `rejected`, `deleted` - soft delete) kèm lưu vết audit record trong `ModerationReview`.
+- Module: Admin Management
+- Authentication: Bearer JWT
+- Role/permission: `admin`
+- Trạng thái xác minh: **Đã test** — Pytest `test_admin_updates_video_status_with_soft_delete`.
+
+**Request body**: `{"status": "rejected", "reason": "Vi phạm quy chế"}` hoặc `{"status": "deleted"}`.  
+**Response**: HTTP `200 OK` với thông tin VideoResponse.
+
+### 3.29 Thống kê hệ thống (Admin - UC020)
+
+**Thông tin chung**
+
+- Method: `GET`
+- Path: `/api/v1/admin/stats`
+- Operation ID: `admin_get_stats`
+- Query parameters: `days` (mặc định 30, tối thiểu 1).
+- Chức năng: Thống kê số lượng video theo trạng thái, báo cáo theo trạng thái, khiếu nại theo trạng thái, tác vụ AI và khối lượng công việc của từng kiểm duyệt viên.
+- Module: Admin Management
+- Authentication: Bearer JWT
+- Role/permission: `admin`
+- Trạng thái xác minh: **Đã test** — Pytest `test_moderator_and_system_stats`.
+
+### 3.30 Thống kê hiệu suất Moderator (Admin - UC019)
+
+**Thông tin chung**
+
+- Method: `GET`
+- Path: `/api/v1/admin/moderators/{moderator_id}/stats`
+- Operation ID: `admin_get_moderator_stats`
+- Path parameters: `moderator_id` (UUID).
+- Chức năng: Xem số video đã duyệt (`videos_reviewed`) và số khiếu nại đã xử lý (`appeals_handled`) của kiểm duyệt viên.
+- Module: Admin Management
+- Authentication: Bearer JWT
+- Role/permission: `admin`
+- Trạng thái xác minh: **Đã test** — Pytest `test_moderator_and_system_stats`.
+
 ## 4. Luồng gọi API thực tế
 
 ### 4.1 Tạo user và đọc profile
@@ -1199,6 +1401,16 @@ curl -OJ http://127.0.0.1:8000/api/v1/videos/<video_id>/stream
 | 25 | GET | `/api/v1/admin/moderators` | Admin Management | JWT + admin | Đã test |
 | 26 | PATCH | `/api/v1/admin/users/{user_id}/role` | Admin Management | JWT + admin | Đã test |
 | 27 | GET | `/api/v1/videos/{video_id}/stream` | Video Management | Không (JWT nếu chưa published) | Đã test |
+| 28 | POST | `/api/v1/videos/{video_id}/appeals` | Appeals / Re-review | JWT + owner | Đã test |
+| 29 | GET | `/api/v1/moderation/appeals` | Moderation Appeals | JWT + mod/admin | Đã test |
+| 30 | POST | `/api/v1/moderation/appeals/{appeal_id}/decision` | Moderation Appeals | JWT + mod/admin | Đã test |
+| 31 | PATCH | `/api/v1/videos/{video_id}/labels` | Label Management | JWT + mod/admin | Đã test |
+| 32 | POST | `/api/v1/admin/labels` | Label Administration | JWT + admin | Đã test |
+| 33 | GET | `/api/v1/admin/labels` | Label Administration | JWT + admin | Đã test |
+| 34 | PATCH | `/api/v1/admin/labels/{label_id}` | Label Administration | JWT + admin | Đã test |
+| 35 | PATCH | `/api/v1/admin/videos/{video_id}/status` | Video Administration | JWT + admin | Đã test |
+| 36 | GET | `/api/v1/admin/stats` | System Statistics | JWT + admin | Đã test |
+| 37 | GET | `/api/v1/admin/moderators/{moderator_id}/stats` | Moderator Statistics | JWT + admin | Đã test |
 
 ## 6. Đối chiếu và giới hạn
 

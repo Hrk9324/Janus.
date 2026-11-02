@@ -42,3 +42,9 @@ class ReportStatus(str, Enum):
 class ModerationAction(str, Enum):
     approve = "approve"
     reject = "reject"
+
+
+class AppealStatus(str, Enum):
+    open = "open"
+    approved = "approved"
+    rejected = "rejected"

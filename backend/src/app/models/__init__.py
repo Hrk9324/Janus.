@@ -1,5 +1,6 @@
 from app.models.base import Base, utcnow
 from app.models.enums import (
+    AppealStatus,
     JobStatus,
     LabelSource,
     ModerationAction,
@@ -8,17 +9,19 @@ from app.models.enums import (
     VideoStatus,
     VideoVisibility,
 )
-from app.models.moderation import ModerationReview, Report
+from app.models.moderation import Appeal, ModerationReview, Report
 from app.models.social import UserFollow, VideoBookmark, VideoComment, VideoLike
 from app.models.user import User
 from app.models.video import AIJob, Label, Video, VideoLabel
 
 __all__ = [
     "AIJob",
+    "Appeal",
+    "AppealStatus",
     "Base",
     "JobStatus",
-    "LabelSource",
     "Label",
+    "LabelSource",
     "ModerationAction",
     "ModerationReview",
     "Report",
