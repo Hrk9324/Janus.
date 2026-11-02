@@ -333,3 +333,76 @@ def test_moderator_and_system_stats(client, register):
         ).status_code
         == 404
     )
+
+
+def test_moderation_queue_returns_enriched_dto(client, register, seed_video):
+    moderator = register("queue-mod@example.com", role=UserRole.moderator)
+    video = seed_video(status=VideoStatus.pending_review, caption="Video cần duyệt")
+    attach_label(video.video_id, "Adult", confidence=0.73)
+
+    resp = client.get("/api/v1/moderation/queue", headers=moderator)
+    assert resp.status_code == 200
+    items = resp.json()
+    assert len(items) >= 1
+    match = next(item for item in items if item["id"] == str(video.video_id))
+    assert match["caption"] == "Video cần duyệt"
+    assert "labels" in match
+    assert any(label["name"] == "Adult" for label in match["labels"])
+    assert "queue_reason" in match
+    assert "Adult" in match["queue_reason"]
+    assert "report_count" in match
+    assert "thumbnail_url" in match
+
+
+def test_moderation_decision_reject_requires_reason(client, register, seed_video):
+    moderator = register("reject-val-mod@example.com", role=UserRole.moderator)
+    video = seed_video(status=VideoStatus.pending_review)
+    url = f"/api/v1/moderation/videos/{video.video_id}/decision"
+
+    # Reject không có reason hoặc chuỗi rỗng -> 422
+    resp_empty = client.post(url, json={"action": "reject", "reason": ""}, headers=moderator)
+    assert resp_empty.status_code == 422
+    assert "Lý do từ chối là bắt buộc" in resp_empty.text
+
+    resp_none = client.post(url, json={"action": "reject"}, headers=moderator)
+    assert resp_none.status_code == 422
+    assert "Lý do từ chối là bắt buộc" in resp_none.text
+
+    resp_whitespace = client.post(url, json={"action": "reject", "reason": "   "}, headers=moderator)
+    assert resp_whitespace.status_code == 422
+
+
+def test_moderation_decision_reject_and_approve_success(client, register, seed_video):
+    moderator = register("decision-ok-mod@example.com", role=UserRole.moderator)
+    video1 = seed_video(status=VideoStatus.pending_review)
+    url1 = f"/api/v1/moderation/videos/{video1.video_id}/decision"
+
+    # Reject với lý do hợp lệ -> thành công (204)
+    resp_reject = client.post(
+        url1,
+        json={"action": "reject", "reason": "Vi phạm tiêu chuẩn cộng đồng về nội dung nhạy cảm"},
+        headers=moderator,
+    )
+    assert resp_reject.status_code == 204
+
+    with SessionLocal() as db:
+        from app.models import ModerationReview, Video
+
+        refreshed1 = db.get(Video, video1.video_id)
+        assert refreshed1.status is VideoStatus.rejected
+        review = db.scalar(select(ModerationReview).where(ModerationReview.video_id == video1.video_id))
+        assert review is not None
+        assert review.action.value == "reject"
+        assert review.reason == "Vi phạm tiêu chuẩn cộng đồng về nội dung nhạy cảm"
+
+    # Approve không bắt buộc reason -> thành công (204)
+    video2 = seed_video(status=VideoStatus.pending_review)
+    url2 = f"/api/v1/moderation/videos/{video2.video_id}/decision"
+    resp_approve = client.post(url2, json={"action": "approve"}, headers=moderator)
+    assert resp_approve.status_code == 204
+
+    with SessionLocal() as db:
+        from app.models import Video
+
+        refreshed2 = db.get(Video, video2.video_id)
+        assert refreshed2.status is VideoStatus.published

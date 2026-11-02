@@ -5,24 +5,24 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies import require_roles
-from app.models import Appeal, Report, User, UserRole, Video
+from app.models import Appeal, Report, User, UserRole
 from app.schemas import (
     AppealDecisionRequest,
     AppealResponse,
     ModerationDecisionRequest,
+    ModerationQueueItemResponse,
     ReportResponse,
-    VideoResponse,
 )
 from app.services import moderation_service
 
 router = APIRouter(prefix="/moderation", tags=["moderation"])
 
 
-@router.get("/queue", response_model=list[VideoResponse])
+@router.get("/queue", response_model=list[ModerationQueueItemResponse])
 def moderation_queue(
     user: User = Depends(require_roles(UserRole.moderator, UserRole.admin)),
     db: Session = Depends(get_db),
-) -> list[Video]:
+) -> list[ModerationQueueItemResponse]:
     return moderation_service.moderation_queue(db)
 
 

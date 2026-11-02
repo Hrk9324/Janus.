@@ -1,14 +1,32 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import AppealStatus, ModerationAction
+from app.schemas.video import LabelResponse, VideoResponse
 
 
 class ModerationDecisionRequest(BaseModel):
     action: ModerationAction
     reason: str | None = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_reason_if_rejected(self) -> "ModerationDecisionRequest":
+        if self.action == ModerationAction.reject:
+            if not self.reason or not self.reason.strip():
+                raise ValueError("Lý do từ chối là bắt buộc.")
+            self.reason = self.reason.strip()
+        return self
+
+
+class ModerationQueueItemResponse(VideoResponse):
+    thumbnail_url: str | None = None
+    stream_url: str | None = None
+    ai_status: str | None = None
+    labels: list[LabelResponse] = Field(default_factory=list)
+    queue_reason: str = "Chờ duyệt"
+    report_count: int = 0
 
 
 class AppealCreate(BaseModel):
