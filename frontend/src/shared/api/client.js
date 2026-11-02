@@ -57,11 +57,19 @@ export async function apiFetch(path, options = {}) {
       signal,
     })
   } catch {
-    // Mất mạng / backend chưa chạy: trả về lỗi rõ ràng thay vì để Promise reject im lặng.
     throw new ApiError(0, 'Không kết nối được tới máy chủ. Hãy kiểm tra backend đang chạy.')
   }
 
   if (response.status === 204) return null
+
+  if (response.status === 401 && auth) {
+    try {
+      const payload = await response.clone().json().catch(() => null)
+      if (payload?.detail === 'User not found') {
+        localStorage.removeItem(TOKEN_KEY)
+      }
+    } catch {}
+  }
 
   const payload = await response.json().catch(() => null)
   if (!response.ok) {

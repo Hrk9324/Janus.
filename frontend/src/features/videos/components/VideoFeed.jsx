@@ -51,7 +51,7 @@ export default function VideoFeed() {
     )
   }
 
-  if (videos.length === 0) {
+  if (!Array.isArray(videos) || videos.length === 0) {
     return (
       <div className="feed-center">
         <EmptyState
