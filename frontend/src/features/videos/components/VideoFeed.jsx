@@ -71,8 +71,14 @@ export default function VideoFeed() {
   return (
     <div className="feed-wrapper">
       <div className="feed" ref={containerRef}>
-        {videos.map((video) => (
-          <VideoSlide key={video.id} video={video} onReported={refresh} />
+        {videos.map((video, index) => (
+          <VideoSlide
+            key={video.id}
+            video={video}
+            onReported={refresh}
+            shouldMountVideo={index === activeIndex || index === activeIndex + 1}
+            isActive={index === activeIndex}
+          />
         ))}
       </div>
       {videos.length > 1 && (

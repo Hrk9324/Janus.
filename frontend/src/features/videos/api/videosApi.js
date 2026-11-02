@@ -13,6 +13,10 @@ export function fetchMyVideos() {
   return apiFetch('/v1/videos')
 }
 
+export function updateVideo(videoId, payload) {
+  return apiFetch(`/v1/videos/${videoId}`, { method: 'PATCH', body: payload })
+}
+
 export function fetchAiResult(videoId) {
   return apiFetch(`/v1/videos/${videoId}/ai`)
 }

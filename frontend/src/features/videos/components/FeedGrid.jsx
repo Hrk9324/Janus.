@@ -1,5 +1,4 @@
 import { useFeed } from '../hooks/useFeed'
-import { apiUrl } from '@/shared/api/client'
 import Icon from '@/shared/components/Icon'
 
 export default function FeedGrid() {
@@ -25,11 +24,14 @@ export default function FeedGrid() {
   return (
     <div className="feed-grid">
       {videos.map((video) => {
-        const src = video.stream_url ? apiUrl(video.stream_url) : video.thumbnail_url
         return (
           <article key={video.id} className="feed-grid-card">
             <div className="feed-grid-thumb">
-              {src ? <video src={src} muted preload="metadata" /> : <div className="feed-grid-placeholder" />}
+              {video.thumbnail_url ? (
+                <img src={video.thumbnail_url} alt={video.caption || 'Video'} />
+              ) : (
+                <div className="feed-grid-placeholder" />
+              )}
               <div className="feed-grid-play">
                 <Icon name="play" size={14} />
               </div>

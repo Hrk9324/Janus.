@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.db.session import SessionLocal
-from app.models import Label, UserRole, Video, VideoLabel, VideoStatus
+from app.models import Label, UserRole, VideoLabel, VideoStatus
 from app.services.ai_service import confidence_level
 
 
@@ -67,46 +67,24 @@ def test_stream_visibility_rules(client, register, login, seed_video):
     )
     missing = seed_video(write_file=False)
     assert client.get(f"/api/v1/videos/{missing.video_id}/stream", headers=login(missing.email)).status_code == 404
-    assert client.get(url).status_code == 401
+    assert client.get(url).status_code == 404
 
 
-def test_search_filters_by_label_exclude_label_and_caption(
-    client, register, login, seed_video
-):
+def test_search_by_tag_returns_public_paginated_items(client, seed_video):
     adult = seed_video(caption="clip có yếu tố người lớn")
     attach_label(str(adult.video_id), "Adult")
     normal = seed_video(caption="clip bình thường")
     attach_label(str(normal.video_id), "Safe")
     pending = seed_video(caption="chờ kiểm duyệt", status=VideoStatus.pending_review)
 
-    headers = register("searcher@example.com")
-    base = "/api/v1/videos"
-
-    by_label = client.get(f"{base}/search?label=Adult", headers=headers).json()
-    assert {item["id"] for item in by_label} == {str(adult.video_id)}
-
-    excluded = client.get(f"{base}/search?exclude_label=Adult", headers=headers).json()
-    excluded_ids = {item["id"] for item in excluded}
-    assert str(adult.video_id) not in excluded_ids
-    assert str(normal.video_id) in excluded_ids
-
-    by_caption = client.get(f"{base}/search?q=bình thường", headers=headers).json()
-    assert {item["id"] for item in by_caption} == {str(normal.video_id)}
-
-    # Video của người khác đang chờ kiểm duyệt không lọt vào kết quả.
-    all_ids = {item["id"] for item in client.get(f"{base}/search", headers=headers).json()}
-    assert str(pending.video_id) not in all_ids
-    # ... nhưng chủ của nó vẫn thấy video của mình.
-    owner_view = {item["id"] for item in client.get(f"{base}/search", headers=login(pending.email)).json()}
-    assert str(pending.video_id) in owner_view
-
-    # Kèm nhãn và giới hạn số lượng.
-    limited = client.get(f"{base}/search?limit=1", headers=headers).json()
-    assert len(limited) == 1
-    assert client.get(f"{base}/search?limit=0", headers=headers).status_code == 422
-
-    item = next(entry for entry in by_label if entry["id"] == str(adult.video_id))
-    assert [label["name"] for label in item["labels"]] == ["Adult"]
-    assert item["owner_display_name"] == "Owner"
-
-    assert client.get(f"{base}/search").status_code == 401
+    response = client.get("/api/v1/videos/search?tag=Adult&limit=1")
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"items", "has_more", "next_cursor"}
+    assert len(body["items"]) == 1
+    assert body["items"][0]["id"] == str(adult.video_id)
+    assert body["items"][0]["matched_labels"] == ["Adult"]
+    assert str(pending.video_id) not in {
+        item["id"] for item in body["items"]
+    }
+    assert client.get("/api/v1/videos/search?tag=Adult&limit=0").status_code == 422

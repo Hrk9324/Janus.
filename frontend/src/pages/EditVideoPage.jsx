@@ -1,40 +1,49 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
-
-const MY_VIDEOS = [
-  { id: 1, title: 'Video demo 1', thumb: null },
-  { id: 2, title: 'Video demo 2', thumb: null },
-]
+import { fetchMyVideos, updateVideo } from '@/features/videos/api/videosApi'
 
 export default function EditVideoPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState('list')
+  const [videos, setVideos] = useState([])
   const [selectedVideo, setSelectedVideo] = useState(null)
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [cover, setCover] = useState(null)
+  const [visibility, setVisibility] = useState('public')
+  const [allowComments, setAllowComments] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetchMyVideos()
+      .then(setVideos)
+      .catch((requestError) => setError(requestError.detail || requestError.message))
+      .finally(() => setLoading(false))
+  }, [])
 
   function selectVideo(video) {
     setSelectedVideo(video)
-    setTitle(video.title)
-    setDescription('')
-    setCover(null)
+    setTitle(video.caption || video.original_filename || '')
+    setVisibility(video.visibility || 'public')
+    setAllowComments(video.allow_comments !== false)
     setStep('edit')
   }
 
-  function handleCover(e) {
-    const file = e.target.files?.[0]
-    if (file) {
-      setCover(URL.createObjectURL(file))
-    }
-  }
-
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault()
-    navigate('/profile')
+    setSaving(true)
+    setError('')
+    try {
+      await updateVideo(selectedVideo.id, { caption: title, visibility, allow_comments: allowComments })
+      navigate('/profile')
+    } catch (requestError) {
+      setError(requestError.detail || requestError.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (step === 'list') {
@@ -46,6 +55,7 @@ export default function EditVideoPage() {
           <p className="page-sub">Chọn video bạn đã tải lên để chỉnh sửa thông tin.</p>
         </div>
       </div>
+      {error && <p className="error-note">{error}</p>}
 
         <section className="card">
           <header className="card-head">
@@ -55,19 +65,19 @@ export default function EditVideoPage() {
             </div>
           </header>
           <div className="card-body">
-            <div className="video-list">
-              {MY_VIDEOS.map((video) => (
+            {loading ? <p>Đang tải danh sách video...</p> : <div className="video-list">
+              {videos.map((video) => (
                 <button key={video.id} type="button" className="video-list-item" onClick={() => selectVideo(video)}>
                   <div className="video-list-thumb">
                     <Icon name="play" size={18} />
                   </div>
                   <div className="video-list-info">
-                    <strong>{video.title}</strong>
+                    <strong>{video.caption || video.original_filename || 'Video không tiêu đề'}</strong>
                     <span>Chỉnh sửa</span>
                   </div>
                 </button>
               ))}
-            </div>
+            </div>}
           </div>
         </section>
       </div>
@@ -79,9 +89,10 @@ export default function EditVideoPage() {
       <div className="page-head">
         <div>
           <h1>Chỉnh sửa thông tin video</h1>
-          <p className="page-sub">Cập nhật tiêu đề, mô tả và ảnh bìa cho "{selectedVideo?.title}".</p>
+          <p className="page-sub">Cập nhật caption và quyền hiển thị cho "{selectedVideo?.caption || selectedVideo?.original_filename}".</p>
         </div>
       </div>
+      {error && <p className="error-note">{error}</p>}
 
       <form className="edit-video-grid" onSubmit={submit}>
         <section className="card">
@@ -93,38 +104,28 @@ export default function EditVideoPage() {
           </header>
           <div className="card-body form-stack">
             <label className="field">
-              <span>Tiêu đề video</span>
+              <span>Caption</span>
               <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nhập tiêu đề video" />
             </label>
             <label className="field">
-              <span>Mô tả</span>
-              <textarea className="text-input textarea" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Thêm mô tả cho video..." />
+              <span>Hiển thị</span>
+              <select className="text-input" value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+                <option value="public">Công khai</option>
+                <option value="private">Riêng tư</option>
+              </select>
             </label>
-          </div>
-        </section>
-
-        <section className="card">
-          <header className="card-head">
-            <div>
-              <h2>Ảnh bìa</h2>
-              <p className="card-sub">Chọn ảnh bìa hiển thị cho video</p>
-            </div>
-          </header>
-          <div className="card-body">
-            <div className="cover-upload">
-              {cover ? <img src={cover} alt="Ảnh bìa" /> : <div className="cover-placeholder"><Icon name="film" size={26} /></div>}
-              <label className="button ghost">
-                <input type="file" accept="image/*" hidden onChange={handleCover} />
-                Chọn ảnh bìa
-              </label>
-            </div>
+            <label className="field">
+              <span>
+                <input type="checkbox" checked={allowComments} onChange={(e) => setAllowComments(e.target.checked)} /> Cho phép bình luận
+              </span>
+            </label>
           </div>
         </section>
 
         <div className="edit-actions">
           <button type="button" className="button ghost" onClick={() => setStep('list')}>Quay lại danh sách</button>
           <button type="button" className="button ghost" onClick={() => navigate(-1)}>Hủy</button>
-          <button type="submit" className="button primary">Lưu thay đổi</button>
+          <button type="submit" className="button primary" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
         </div>
       </form>
     </div>

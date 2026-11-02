@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 
 import Icon from '@/shared/components/Icon'
-import { streamUrl } from '../api/videosApi'
 import ReportDialog from './ReportDialog'
 import CommentDrawer from './CommentDrawer'
 
 /** Một video trong feed: bấm để phát/tạm dừng, có các hành động bên phải. */
-export default function VideoSlide({ video, onReported }) {
+export default function VideoSlide({ video, onReported, shouldMountVideo = false, isActive = false }) {
   const containerRef = useRef(null)
   const videoRef = useRef(null)
   const volumeRef = useRef(null)
@@ -97,6 +96,10 @@ export default function VideoSlide({ video, onReported }) {
   }
 
   useEffect(() => {
+    if (!shouldMountVideo) setPlaying(false)
+  }, [shouldMountVideo])
+
+  useEffect(() => {
     function onChange() {
       setFullscreen(Boolean(document.fullscreenElement))
     }
@@ -110,16 +113,22 @@ export default function VideoSlide({ video, onReported }) {
   return (
     <article className="slide" ref={containerRef}>
       <button type="button" className="slide-stage" onClick={togglePlayback} aria-label="Phát hoặc tạm dừng video">
-        <video
-          ref={videoRef}
-          src={streamUrl(video.id)}
-          loop
-          playsInline
-          muted={muted}
-          preload="metadata"
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-        />
+        {shouldMountVideo ? (
+          <video
+            ref={videoRef}
+            src={video.stream_url}
+            loop
+            playsInline
+            muted={muted}
+            preload={isActive ? 'auto' : 'metadata'}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+          />
+        ) : video.thumbnail_url ? (
+          <img src={video.thumbnail_url} alt={video.caption || 'Video'} className="slide-poster" />
+        ) : (
+          <div className="slide-poster placeholder" aria-label="Ảnh bìa chưa sẵn sàng" />
+        )}
         {!playing && (
           <span className="slide-play">
             <Icon name="play" size={26} />
@@ -200,4 +209,3 @@ export default function VideoSlide({ video, onReported }) {
     </article>
   )
 }
-

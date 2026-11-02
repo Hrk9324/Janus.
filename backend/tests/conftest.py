@@ -1,24 +1,29 @@
 import os
 from pathlib import Path
+from tempfile import gettempdir
 from types import SimpleNamespace
 from uuid import uuid4
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-TEST_DB_PATH = BACKEND_ROOT / "test.db"
-TEST_STORAGE_PATH = BACKEND_ROOT / "test_storage"
+TEST_RUNTIME_PATH = Path(gettempdir()) / f"pbl6-pytest-{os.getpid()}"
+TEST_RUNTIME_PATH.mkdir(parents=True, exist_ok=True)
+TEST_DB_PATH = TEST_RUNTIME_PATH / "test.db"
+TEST_STORAGE_PATH = TEST_RUNTIME_PATH / "storage"
 
-os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH.as_posix()}"
+os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH}"
 os.environ["UPLOAD_DIR"] = str(TEST_STORAGE_PATH)
+os.environ["STORAGE_DRIVER"] = "local"
+os.environ["AI_ANALYSIS_MODE"] = "auto"
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.security import hash_password
 from app.db.session import Base, get_db
 from app.main import app
 from app.models import AIJob, User, UserRole, Video, VideoStatus
-from app.core.security import hash_password
 
 engine = create_engine(
     f"sqlite:///{TEST_DB_PATH.as_posix()}",

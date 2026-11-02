@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
@@ -8,6 +9,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, utcnow
 from app.models.enums import UserRole
+
+
+def generate_discriminator() -> str:
+    return f"{secrets.randbelow(9999) + 1:04d}"
+
 
 if TYPE_CHECKING:
     from app.models.video import Video
@@ -26,7 +32,9 @@ class User(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     display_name: Mapped[str] = mapped_column(String(120))
-    discriminator: Mapped[str] = mapped_column(String(4), nullable=False, index=True)
+    discriminator: Mapped[str] = mapped_column(
+        String(4), default=generate_discriminator, nullable=False, index=True
+    )
     bio: Mapped[str | None] = mapped_column(String(500), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
