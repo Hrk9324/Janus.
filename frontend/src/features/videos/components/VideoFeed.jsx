@@ -10,9 +10,9 @@ import VideoSlide from './VideoSlide'
  * và slide kế tiếp để tiết kiệm băng thông và tài nguyên giải mã media.
  */
 export default function VideoFeed() {
-  const { videos, loading, error, refresh } = useFeed()
-  const containerRef = useRef(null)
   const [activeIndex, setActiveIndex] = useState(0)
+  const { videos, loading, error, refresh } = useFeed(activeIndex)
+  const containerRef = useRef(null)
 
   useEffect(() => {
     const container = containerRef.current
@@ -94,7 +94,7 @@ export default function VideoFeed() {
       <div className="feed" ref={containerRef}>
         {videos.map((video, index) => (
           <VideoSlide
-            key={video.id}
+            key={video._loopKey || video.id}
             video={video}
             index={index}
             activeIndex={activeIndex}
@@ -104,16 +104,6 @@ export default function VideoFeed() {
           />
         ))}
       </div>
-      {videos.length > 1 && (
-        <div className="feed-progress">
-          {videos.map((_, index) => (
-            <span
-              key={index}
-              className={`feed-progress-dot ${index === activeIndex ? 'active' : ''}`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   )
 }

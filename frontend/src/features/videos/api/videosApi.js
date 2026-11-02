@@ -5,8 +5,13 @@ export function streamUrl(videoId) {
   return apiUrl(`/v1/videos/${videoId}/stream`)
 }
 
-export function fetchFeed() {
-  return apiFetch('/v1/feed', { auth: false }).then((res) => res?.items || res || [])
+/** Lấy feed video công khai với hỗ trợ phân trang cursor. */
+export function fetchFeed({ limit = 3, cursor = null } = {}) {
+  const params = new URLSearchParams()
+  if (limit) params.set('limit', String(limit))
+  if (cursor) params.set('cursor', cursor)
+  const qs = params.toString() ? `?${params.toString()}` : ''
+  return apiFetch(`/v1/feed${qs}`, { auth: false })
 }
 
 export function fetchMyVideos() {
