@@ -21,3 +21,16 @@ export function decideReport(reportId, action, reason) {
     body: { action, reason: reason || null },
   })
 }
+
+/** Lấy danh sách các khiếu nại (UC017). */
+export function fetchAppeals() {
+  return apiFetch('/v1/moderation/appeals')
+}
+
+/** Đưa ra phán quyết khiếu nại (UC017). */
+export function decideAppeal(appealId, action, reason) {
+  return apiFetch(`/v1/moderation/appeals/${appealId}/decision`, {
+    method: 'POST',
+    body: { action, reason: reason || null },
+  })
+}

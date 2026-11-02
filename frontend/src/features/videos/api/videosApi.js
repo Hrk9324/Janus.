@@ -30,6 +30,31 @@ export function reportVideo(videoId, reason) {
 }
 
 /**
+ * Tìm kiếm video theo tag/nhãn dạng lưới với phân trang cursor (UC009).
+ * Chuẩn hóa tag (loại bỏ dấu #) và gọi GET /api/v1/videos/search?tag={tag}&limit={limit}&cursor={cursor}.
+ */
+export function searchVideosByTag(tag, { limit = 12, cursor = null } = {}) {
+  const normalizedTag = tag ? tag.trim().replace(/^#/, '') : ''
+  const params = new URLSearchParams()
+  params.set('tag', normalizedTag)
+  if (limit) params.set('limit', String(limit))
+  if (cursor) params.set('cursor', cursor)
+  return apiFetch(`/v1/videos/search?${params.toString()}`, { auth: false })
+}
+
+/**
+ * Gửi khiếu nại đối với video bị từ chối kiểm duyệt (UC011).
+ * Gọi POST /api/v1/videos/{video_id}/appeals với Bearer token và body { "reason": reason }.
+ */
+export function createAppeal(videoId, reason) {
+  return apiFetch(`/v1/videos/${videoId}/appeals`, {
+    method: 'POST',
+    body: { reason },
+    auth: true,
+  })
+}
+
+/**
  * Tải video lên bằng XMLHttpRequest để có tiến độ thực tế.
  * Lưu ý theo API guide: `caption` truyền dưới dạng query parameter,
  * chỉ phần tệp nằm trong multipart form-data.
