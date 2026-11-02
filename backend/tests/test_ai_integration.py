@@ -17,7 +17,7 @@ from app.ai.placeholders import DETECTORS
 from app.core.config import get_settings
 from app.core.security import hash_password
 from app.db.session import SessionLocal
-from app.models import AIJob, JobStatus, User, Video, VideoStatus
+from app.models import AIJob, JobStatus, ModerationAction, User, Video, VideoStatus
 from app.services import ai_service as services
 
 
@@ -145,11 +145,31 @@ def test_analysis_persists_adult_detection_into_moderation_queue(monkeypatch, tm
         job = db.get(AIJob, job_id)
         video = db.get(Video, video_id)
         assert job.status is JobStatus.succeeded
-        assert video.status is VideoStatus.pending_review
+        assert video.status is VideoStatus.rejected
+        assert any("Tự động từ chối bởi hệ thống AI" in (r.reason or "") for r in video.moderation_reviews)
         labels = {video_label.label.name: video_label for video_label in video.labels}
         assert set(labels) == {"Adult"}
         assert labels["Adult"].confidence == pytest.approx(0.87)
         assert labels["Adult"].level == "HIGH"
+
+
+def test_analysis_sets_borderline_medium_risk_to_pending_review(monkeypatch, tmp_path):
+    video_id, job_id = _seed_job(tmp_path)
+    report = AnalysisReport(
+        detections=[Detection(label="Suggestive", confidence=0.55, detector="nsfw")],
+        normal_confidence=0.45,
+        transcript="[NSFW-Detection] borderline",
+        source="nsfw-detection",
+    )
+    monkeypatch.setattr(services, "analyse_video", lambda path: report)
+
+    services.run_video_analysis(video_id)
+
+    with SessionLocal() as db:
+        job = db.get(AIJob, job_id)
+        video = db.get(Video, video_id)
+        assert job.status is JobStatus.succeeded
+        assert video.status is VideoStatus.pending_review
 
 
 def test_analysis_publishes_safe_video(monkeypatch, tmp_path):

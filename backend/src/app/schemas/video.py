@@ -111,3 +111,4 @@ class AIResultResponse(BaseModel):
     job_status: str
     transcript: str | None
     labels: list[LabelResponse]
+    video_status: VideoStatus | None = None

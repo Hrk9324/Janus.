@@ -75,6 +75,10 @@ export default function ProfilePage() {
             <strong>{videos.filter((item) => item.status === 'pending_review').length}</strong>
             <span>Chờ duyệt</span>
           </div>
+          <div className="stat">
+            <strong>{videos.filter((item) => item.status === 'rejected').length}</strong>
+            <span>Bị từ chối</span>
+          </div>
         </div>
       </div>
 

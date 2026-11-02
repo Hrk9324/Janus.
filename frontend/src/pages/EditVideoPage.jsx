@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
 import { fetchMyVideos, updateVideo } from '@/features/videos/api/videosApi'
@@ -49,13 +48,13 @@ export default function EditVideoPage() {
   if (step === 'list') {
     return (
       <div className="page">
-      <div className="page-head">
-        <div>
-          <h1>Video của tôi</h1>
-          <p className="page-sub">Chọn video bạn đã tải lên để chỉnh sửa thông tin.</p>
+        <div className="page-head">
+          <div>
+            <h1>Video của tôi</h1>
+            <p className="page-sub">Chọn video bạn đã tải lên để chỉnh sửa thông tin.</p>
+          </div>
         </div>
-      </div>
-      {error && <p className="error-note">{error}</p>}
+        {error && <p className="error-note">{error}</p>}
 
         <section className="card">
           <header className="card-head">
@@ -65,24 +64,32 @@ export default function EditVideoPage() {
             </div>
           </header>
           <div className="card-body">
-            {loading ? <p>Đang tải danh sách video...</p> : <div className="video-list">
-              {videos.map((video) => (
-                <button key={video.id} type="button" className="video-list-item" onClick={() => selectVideo(video)}>
-                  <div className="video-list-thumb">
-                    <Icon name="play" size={18} />
-                  </div>
-                  <div className="video-list-info">
-                    <strong>{video.caption || video.original_filename || 'Video không tiêu đề'}</strong>
-                    <span>Chỉnh sửa</span>
-                  </div>
-                </button>
-              ))}
-            </div>}
+            {loading ? (
+              <p>Đang tải danh sách video...</p>
+            ) : (
+              <div className="video-list">
+                {videos.map((video) => (
+                  <button key={video.id} type="button" className="video-list-item" onClick={() => selectVideo(video)}>
+                    <div className="video-list-thumb">
+                      <Icon name="play" size={18} />
+                    </div>
+                    <div className="video-list-info">
+                      <strong>{video.caption || video.original_filename || 'Video không tiêu đề'}</strong>
+                      <span>Chỉnh sửa</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>
     )
   }
+
+  const isRejected = selectedVideo?.status === 'rejected'
+  const isPending = selectedVideo?.status === 'pending_review' || selectedVideo?.status === 'pending'
+  const isPublished = selectedVideo?.status === 'published'
 
   return (
     <div className="page">
@@ -122,10 +129,57 @@ export default function EditVideoPage() {
           </div>
         </section>
 
-        <div className="edit-actions">
-          <button type="button" className="button ghost" onClick={() => setStep('list')}>Quay lại danh sách</button>
-          <button type="button" className="button ghost" onClick={() => navigate(-1)}>Hủy</button>
-          <button type="submit" className="button primary" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+        <div className="edit-actions" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {isRejected && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                background: 'rgba(255, 92, 92, 0.12)',
+                border: '1px solid rgba(255, 92, 92, 0.3)',
+                color: 'var(--danger)',
+                fontSize: '13px',
+                fontWeight: 500,
+              }}
+            >
+              <Icon name="shield" size={16} />
+              <span>Video đã bị từ chối do vi phạm tiêu chuẩn cộng đồng</span>
+            </div>
+          )}
+
+          {isPending && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                background: 'rgba(255, 176, 32, 0.12)',
+                border: '1px solid rgba(255, 176, 32, 0.3)',
+                color: 'var(--warn)',
+                fontSize: '13px',
+                fontWeight: 500,
+              }}
+            >
+              <Icon name="clock" size={16} />
+              <span>Video đang được lưu trữ và chờ kiểm duyệt viên xem xét thủ công</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <button type="button" className="button ghost" onClick={() => setStep('list')}>Quay lại danh sách</button>
+            <button type="button" className="button ghost" onClick={() => navigate(-1)}>Hủy</button>
+            {isPublished && (
+              <Link to="/" className="button ghost">
+                Xem ở feed <Icon name="arrow" size={14} />
+              </Link>
+            )}
+            <button type="submit" className="button primary" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+          </div>
         </div>
       </form>
     </div>
