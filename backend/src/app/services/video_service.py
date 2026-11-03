@@ -22,9 +22,16 @@ from app.models import (
     VideoStatus,
     VideoVisibility,
 )
-from app.schemas import AIResultResponse, FeedItem, FeedResponse, LabelResponse, VideoUpdate
+from app.schemas import (
+    AIResultResponse,
+    FeedItem,
+    FeedResponse,
+    LabelResponse,
+    VideoUpdate,
+)
 from app.services.ai_service import validate_mp4_content
 from app.services.storage_service import get_storage_service
+
 
 def upload_video(
     db: Session,
@@ -37,7 +44,10 @@ def upload_video(
 ) -> Video:
     """Kiểm tra tệp MP4, lưu vào thư mục upload và tạo job AI chờ xử lý."""
     settings = get_settings()
-    if Path(filename).suffix.lower() != settings.allowed_video_extension or content_type != "video/mp4":
+    if (
+        Path(filename).suffix.lower() != settings.allowed_video_extension
+        or content_type != "video/mp4"
+    ):
         raise InvalidInputError("Chỉ chấp nhận tệp MP4")
     if len(content) > settings.max_upload_size_bytes:
         raise PayloadTooLargeError("Video vượt quá dung lượng 50MB")
@@ -122,11 +132,10 @@ def list_published_feed(
                 and not storage.is_existing_local_path(video.storage_path)
                 else f"/api/v1/videos/{video.id}/stream"
             ),
-            thumbnail_url=storage.get_thumbnail_url(
-                f"thumbnails/{video.id}.jpg"
-            ),
+            thumbnail_url=storage.get_thumbnail_url(f"thumbnails/{video.id}.jpg"),
             allow_comments=video.allow_comments,
             created_at=video.created_at,
+            view_count=getattr(video, "view_count", 0) or 0,
         )
         for video in items
     ]
@@ -141,9 +150,17 @@ def get_ai_result(db: Session, video_id: UUID, requester: User) -> AIResultRespo
     """Chỉ chủ video hoặc moderator/admin xem được kết quả phân tích."""
     video = db.get(Video, video_id)
     allowed_roles = {UserRole.moderator, UserRole.admin}
-    if video is None or video.is_deleted or (video.owner_id != requester.id and requester.role not in allowed_roles):
+    if (
+        video is None
+        or video.is_deleted
+        or (video.owner_id != requester.id and requester.role not in allowed_roles)
+    ):
         raise NotFoundError("Không tìm thấy video")
-    job = db.scalar(select(AIJob).where(AIJob.video_id == video_id).order_by(AIJob.created_at.desc()))
+    job = db.scalar(
+        select(AIJob)
+        .where(AIJob.video_id == video_id)
+        .order_by(AIJob.created_at.desc())
+    )
     labels = [
         LabelResponse(
             name=item.label.name,
@@ -180,7 +197,10 @@ def update_video(
     if video.owner_id != owner.id:
         raise ForbiddenError("Bạn không có quyền chỉnh sửa video này")
     values = payload.model_dump(exclude_unset=True)
-    if video.status == VideoStatus.rejected and values.get("visibility") == VideoVisibility.public:
+    if (
+        video.status == VideoStatus.rejected
+        and values.get("visibility") == VideoVisibility.public
+    ):
         raise InvalidInputError("Video đã bị từ chối không thể chuyển sang công khai")
     if "caption" in values:
         video.caption = values["caption"]
@@ -202,7 +222,10 @@ def resolve_stream_target(
     if video is None or video.is_deleted:
         raise NotFoundError("Không tìm thấy video")
     is_owner = requester is not None and video.owner_id == requester.id
-    is_staff = requester is not None and requester.role in {UserRole.moderator, UserRole.admin}
+    is_staff = requester is not None and requester.role in {
+        UserRole.moderator,
+        UserRole.admin,
+    }
     is_public = (
         video.status == VideoStatus.published
         and video.visibility == VideoVisibility.public

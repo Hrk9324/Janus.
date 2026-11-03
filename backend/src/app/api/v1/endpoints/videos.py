@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,7 @@ from app.schemas import (
     VideoLabelsResponse,
     VideoResponse,
     VideoUpdate,
+    VideoViewResponse,
 )
 from app.services import (
     ai_service,
@@ -30,6 +31,7 @@ from app.services import (
     search_service,
     video_label_service,
     video_service,
+    view_tracking_service,
 )
 
 router = APIRouter(tags=["videos"])
@@ -177,3 +179,38 @@ def create_report(
     db: Session = Depends(get_db),
 ) -> ReportResponse:
     return moderation_service.create_report(db, video_id, user, payload.reason)
+
+
+@router.post(
+    "/videos/{video_id}/views",
+    response_model=VideoViewResponse,
+    status_code=status.HTTP_200_OK,
+)
+def record_video_view(
+    video_id: UUID,
+    request: Request,
+    user: User | None = Depends(optional_user),
+    db: Session = Depends(get_db),
+) -> VideoViewResponse:
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    real_ip = request.headers.get("X-Real-IP")
+    forwarded = request.headers.get("X-Forwarded-For")
+    if cf_ip:
+        client_ip = cf_ip.strip()
+    elif real_ip:
+        client_ip = real_ip.strip()
+    elif forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    elif request.client and request.client.host:
+        client_ip = request.client.host
+    else:
+        client_ip = "127.0.0.1"
+
+    user_id = user.id if user is not None else None
+    result = view_tracking_service.record_video_view(
+        db,
+        video_id=video_id,
+        user_id=user_id,
+        client_ip=client_ip,
+    )
+    return VideoViewResponse(**result)

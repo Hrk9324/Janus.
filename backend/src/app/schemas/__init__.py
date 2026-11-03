@@ -62,6 +62,7 @@ from app.schemas.video import (
     VideoLabelsResponse,
     VideoResponse,
     VideoUpdate,
+    VideoViewResponse,
 )
 
 __all__ = [
@@ -119,4 +120,5 @@ __all__ = [
     "VideoLabelsResponse",
     "VideoResponse",
     "VideoUpdate",
+    "VideoViewResponse",
 ]

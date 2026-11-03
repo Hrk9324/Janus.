@@ -1,8 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import Icon from '@/shared/components/Icon'
+import { recordVideoView } from '../api/videosApi'
 import ReportDialog from './ReportDialog'
 import CommentDrawer from './CommentDrawer'
+
+function formatViewCount(num) {
+  const n = Number(num) || 0
+  if (n >= 1_000_000) {
+    const formatted = (n / 1_000_000).toFixed(1).replace(/\.0$/, '')
+    return `${formatted}M`
+  }
+  if (n >= 1_000) {
+    const formatted = (n / 1_000).toFixed(1).replace(/\.0$/, '')
+    return `${formatted}K`
+  }
+  return n.toLocaleString('vi-VN')
+}
 
 /**
  * Một video slide trong feed dọc.
@@ -30,6 +44,10 @@ export default function VideoSlide({
   const [followed, setFollowed] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+  const [currentViews, setCurrentViews] = useState(
+    Number(video.view_count ?? video.views ?? video.play_count ?? 0)
+  )
+  const hasCountedRef = useRef(false)
 
   const isActive =
     propIsActive !== undefined
@@ -52,11 +70,19 @@ export default function VideoSlide({
     setShowVolume(false)
     setShowComments(false)
     setFullscreen(false)
+    setCurrentViews(Number(video.view_count ?? video.views ?? video.play_count ?? 0))
+    hasCountedRef.current = false
     if (videoRef.current) {
       videoRef.current.muted = true
       videoRef.current.volume = 0.5
     }
-  }, [video.id])
+  }, [video.id, video.view_count, video.views])
+
+  useEffect(() => {
+    if (!isActive) {
+      hasCountedRef.current = false
+    }
+  }, [isActive])
 
   // Tự động phát khi slide trở thành active và dừng khi lướt sang video khác
   useEffect(() => {
@@ -158,7 +184,47 @@ export default function VideoSlide({
     el.requestFullscreen?.().then(() => setFullscreen(true)).catch(() => {})
   }
 
-  const viewCount = video.views || video.view_count || video.play_count || 0
+  const triggerCountView = useCallback(async () => {
+    if (hasCountedRef.current) return
+    hasCountedRef.current = true
+
+    try {
+      const res = await recordVideoView(video.id)
+      if (res && typeof res.view_count === 'number') {
+        setCurrentViews(res.view_count)
+      } else if (res?.counted) {
+        setCurrentViews((prev) => prev + 1)
+      }
+    } catch (err) {
+      console.debug('Failed to record video view:', err)
+    }
+  }, [video.id])
+
+  function handleTimeUpdate() {
+    const el = videoRef.current
+    if (!el || !isActive || hasCountedRef.current) return
+    // Điều kiện 1: Đã xem liên tục từ 5 giây trở lên
+    if (el.currentTime >= 5) {
+      triggerCountView()
+    } else if (
+      el.duration &&
+      el.duration < 5 &&
+      el.currentTime >= Math.max(0, el.duration - 0.25)
+    ) {
+      // Hỗ trợ video ngắn dưới 5s khi phát lặp lại (loop)
+      triggerCountView()
+    }
+  }
+
+  function handleEnded() {
+    const el = videoRef.current
+    if (!el || !isActive || hasCountedRef.current) return
+    // Điều kiện 2: Video có thời lượng ngắn (< 5s) và phát hết video
+    if (el.duration && el.duration < 5) {
+      triggerCountView()
+    }
+  }
+
   const likeCount = video.likes || video.like_count || 0
 
   return (
@@ -179,6 +245,8 @@ export default function VideoSlide({
             preload={isActive ? 'auto' : 'metadata'}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
+            onTimeUpdate={handleTimeUpdate}
+            onEnded={handleEnded}
           />
         ) : video.thumbnail_url ? (
           <img
@@ -218,11 +286,11 @@ export default function VideoSlide({
             {followed ? 'Đang theo dõi' : 'Theo dõi'}
           </button>
         </div>
-        <p className="slide-caption">{video.caption || video.original_filename}</p>
         <div className="slide-view">
           <Icon name="play" size={12} />
-          <span>{viewCount.toLocaleString('vi-VN')} lượt xem</span>
+          <span>{formatViewCount(currentViews)} lượt xem</span>
         </div>
+        <p className="slide-caption">{video.caption || video.original_filename}</p>
       </div>
 
       <div className="slide-actions">

@@ -1725,6 +1725,85 @@ HTTP `204 No Content`.
 
 - `422`: Token không hợp lệ, token đã được dùng hoặc đã hết hạn. Mật khẩu không đáp ứng độ dài tối thiểu (8 ký tự).
 
+### 3.35 Ghi nhận lượt xem video (Video View Count)
+
+**Thông tin chung**
+
+- Method: `POST`
+- Path: `/api/v1/videos/{video_id}/views`
+- Operation ID: `record_video_view`
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/videos/<video_id>/views`
+- Chức năng: Ghi nhận lượt xem (view count) cho video với cơ chế Cooldown chống spam và gian lận.
+- Module: Video Management
+- Authentication: Tùy chọn (Hỗ trợ cả Guest và Authenticated User).
+- Role/permission: Bất kỳ ai (Khách hoặc Người dùng đã đăng nhập).
+- Content-Type: `application/json`
+- Trạng thái xác minh: **Đã test** — Pytest `tests/test_video_views.py`.
+
+**A. Path parameters**
+
+- `video_id` (UUID): ID của video được ghi nhận lượt xem.
+
+**B. Query parameters**: Không có.
+
+**C. Headers**: Tùy chọn `Authorization: Bearer <access_token>` nếu người xem đã đăng nhập.
+
+**D. Request body**: Không có.
+
+**E. Cơ chế nghiệp vụ và Cooldown 5 phút (300 giây)**
+
+- **Khóa nhận diện định danh:**
+  `view:{video_id}:{user_id if user_id else client_ip}`
+- **Quy tắc đếm:**
+  + Cùng 1 tài khoản (User ID) hoặc cùng 1 địa chỉ IP (đối với khách chưa đăng nhập) chỉ được ghi nhận tăng lượt xem **tối đa 1 lần mỗi 5 phút (300 giây)** cho cùng một video.
+  + Nếu gọi API trong thời gian Cooldown: API trả về HTTP `200` với `"counted": false`, `view_count` giữ nguyên.
+  + Nếu gọi API khi đã hết Cooldown (hoặc lần xem đầu tiên): API thực hiện cập nhật nguyên tử (`UPDATE videos SET view_count = view_count + 1 WHERE id = :video_id`), trả về HTTP `200` với `"counted": true`, `view_count` tăng thêm 1.
+
+**F. Contract giao tiếp chi tiết cho Frontend**
+
+Để tối ưu trải nghiệm và ngăn ngừa request dư thừa, Frontend cần tuân thủ nghiêm ngặt các quy tắc sau:
+
+1. **Điều kiện kích hoạt request:**
+   - Client **chỉ kích hoạt request** khi video đang ở trạng thái **active** (đang hiển thị trong viewport người dùng và đang phát).
+   - Người dùng đã **xem liên tục đủ từ 5 giây trở lên** (`Minimum Watch Duration = 5s`). Sử dụng hook theo dõi `ref` của thẻ `<video>` (`timeupdate` event hoặc timer tích lũy thời gian phát thực tế).
+2. **Video ngắn dưới 5 giây:**
+   - Nếu video có tổng thời lượng nhỏ hơn 5 giây (ví dụ video 3s - 4s), kích hoạt request khi người dùng **xem hết toàn bộ video** (bắt sự kiện `onEnded`).
+3. **Quản lý cờ trạng thái tại Client (Deduplication):**
+   - Giữ cờ `hasCountedView = true` trong local state của từng video slide / player item.
+   - Khi cờ `hasCountedView === true`, **tuyệt đối không gửi thêm bất kỳ request nào** trong cùng phiên hiển thị video đó, kể cả khi video lặp lại (`loop`).
+   - Cờ `hasCountedView` chỉ được khởi tạo lại khi người dùng rời đi và quay trở lại sau đó.
+
+**G. Response mẫu**
+
+Lần đầu xem hợp lệ (tăng view):
+```json
+{
+  "video_id": "76ec9d15-0691-44fe-9337-674e2a220261",
+  "view_count": 142,
+  "counted": true
+}
+```
+
+Trường hợp đang trong thời gian Cooldown 5 phút:
+```json
+{
+  "video_id": "76ec9d15-0691-44fe-9337-674e2a220261",
+  "view_count": 142,
+  "counted": false
+}
+```
+
+**H. Lỗi thường gặp**
+
+- `404 Not Found`: Video không tồn tại hoặc đã bị xóa mềm (`is_deleted = true`).
+- `422 Unprocessable Entity`: `video_id` không đúng định dạng UUID.
+
+**I. Ví dụ gọi cURL**
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/videos/76ec9d15-0691-44fe-9337-674e2a220261/views"
+```
+
 ---
 
 ## 4. Luồng gọi API thực tế
@@ -1805,6 +1884,7 @@ HTTP `204 No Content`.
 | 39 | POST | `/api/v1/auth/logout` | Auth | JWT | Đã test |
 | 40 | POST | `/api/v1/auth/password/forgot` | Auth | Không | Đã test |
 | 41 | POST | `/api/v1/auth/password/reset` | Auth | Không | Đã test |
+| 42 | POST | `/api/v1/videos/{video_id}/views` | Video Management | Tùy chọn (JWT/IP) | Đã test |
 
 ## 6. Đối chiếu và giới hạn
 

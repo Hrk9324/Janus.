@@ -18,6 +18,7 @@ class VideoResponse(BaseModel):
     status: VideoStatus
     created_at: datetime
     owner_name: str | None = None
+    view_count: int = 0
 
 
 class FeedItem(BaseModel):
@@ -27,6 +28,13 @@ class FeedItem(BaseModel):
     thumbnail_url: str | None
     allow_comments: bool
     created_at: datetime
+    view_count: int = 0
+
+
+class VideoViewResponse(BaseModel):
+    video_id: UUID
+    view_count: int
+    counted: bool
 
 
 class FeedResponse(BaseModel):

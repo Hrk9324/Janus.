@@ -47,6 +47,9 @@ class Video(Base):
     is_deleted: Mapped[bool] = mapped_column(
         Boolean, default=False, index=True, nullable=False
     )
+    view_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )

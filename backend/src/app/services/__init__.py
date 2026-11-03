@@ -10,6 +10,7 @@ from app.services import (
     thumbnail_service,
     video_label_service,
     video_service,
+    view_tracking_service,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "thumbnail_service",
     "video_label_service",
     "video_service",
+    "view_tracking_service",
 ]

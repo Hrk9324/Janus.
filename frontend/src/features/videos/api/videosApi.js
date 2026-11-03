@@ -98,3 +98,32 @@ export function uploadVideo({ file, caption, onProgress, signal }) {
     request.send(body)
   })
 }
+
+/**
+ * Ghi nhận lượt xem video (Video View Count).
+ * Hỗ trợ cả người dùng đã đăng nhập (JWT) và khách (IP), có cooldown 5 phút (300s).
+ * @param {string} videoId
+ * @returns {Promise<{ video_id: string, view_count: number, counted: boolean }>}
+ */
+export function recordVideoView(videoId) {
+  return apiFetch(`/v1/videos/${videoId}/views`, {
+    method: 'POST',
+    auth: true,
+  })
+}
+
+const videosApi = {
+  streamUrl,
+  fetchFeed,
+  fetchMyVideos,
+  updateVideo,
+  fetchAiResult,
+  deleteVideo,
+  reportVideo,
+  searchVideosByTag,
+  createAppeal,
+  uploadVideo,
+  recordVideoView,
+}
+
+export default videosApi
