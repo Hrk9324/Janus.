@@ -39,8 +39,6 @@ packages = ["src/app"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-<<<<<<< HEAD
-=======
 
 [tool.ruff.lint]
 ignore = ["B008"]
