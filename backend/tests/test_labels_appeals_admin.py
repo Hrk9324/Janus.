@@ -45,22 +45,38 @@ def test_owner_confirms_labels(client, login, seed_video):
 
     response = client.post(
         f"/api/v1/videos/{video.video_id}/labels/confirm",
+<<<<<<< HEAD
+        json={"labels": [{"name": "Adult", "confidence": 0.87}]},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()[0]["name"] == "Adult"
+    assert response.json()[0]["level"] == "HIGH"
+=======
         json={"labels": ["Adult"]},
         headers=headers,
     )
     assert response.status_code == 200
     assert response.json()["labels"][0]["name"] == "Adult"
     assert response.json()["labels"][0]["level"] == "LOW"
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
     # Người khác không xác nhận được nhãn của video này.
     other = login(seed_video().email)
     assert (
         client.post(
             f"/api/v1/videos/{video.video_id}/labels/confirm",
+<<<<<<< HEAD
+            json={"labels": [{"name": "Adult", "confidence": 0.5}]},
+            headers=other,
+        ).status_code
+        == 404
+=======
             json={"labels": ["Adult"]},
             headers=other,
         ).status_code
         == 403
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     )
 
 
@@ -69,6 +85,17 @@ def test_confirm_labels_validates_names(client, login, seed_video):
     headers = login(video.email)
     url = f"/api/v1/videos/{video.video_id}/labels/confirm"
 
+<<<<<<< HEAD
+    unknown = client.post(url, json={"labels": [{"name": "ChuaTonTai", "confidence": 0.5}]}, headers=headers)
+    assert unknown.status_code == 400
+    assert "chưa tồn tại" in unknown.json()["detail"]
+
+    ensure_label("Safe")
+    ensure_label("Gore", active=False)
+    inactive = client.post(url, json={"labels": [{"name": "Gore", "confidence": 0.5}]}, headers=headers)
+    assert inactive.status_code == 400
+    assert "vô hiệu hóa" in inactive.json()["detail"]
+=======
     unknown = client.post(url, json={"labels": ["ChuaTonTai"]}, headers=headers)
     assert unknown.status_code == 200
     assert unknown.json()["labels"][0]["name"] == "ChuaTonTai"
@@ -78,17 +105,30 @@ def test_confirm_labels_validates_names(client, login, seed_video):
     inactive = client.post(url, json={"labels": ["Gore"]}, headers=headers)
     assert inactive.status_code == 200
     assert inactive.json()["labels"][0]["name"] == "Gore"
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
     ensure_label("Safe", active=True)
     duplicate = client.post(
         url,
         json={
+<<<<<<< HEAD
+            "labels": [
+                {"name": "Safe", "confidence": 0.9},
+                {"name": "safe", "confidence": 0.8},
+            ]
+        },
+        headers=headers,
+    )
+    assert duplicate.status_code == 400
+    assert "trùng lặp" in duplicate.json()["detail"]
+=======
             "labels": ["Safe", "safe"]
         },
         headers=headers,
     )
     assert duplicate.status_code == 200
     assert [label["name"] for label in duplicate.json()["labels"]] == ["Safe"]
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 def test_moderator_replaces_labels_and_owner_cannot(client, register, login, seed_video):
@@ -172,7 +212,11 @@ def test_admin_updates_video_status_with_soft_delete(client, register, seed_vide
     deleted = client.patch(url, json={"status": "deleted"}, headers=admin)
     assert deleted.status_code == 200
     assert deleted.json()["status"] == "deleted"
+<<<<<<< HEAD
+    assert client.get("/api/v1/feed").json() == []
+=======
     assert client.get("/api/v1/feed").json()["items"] == []
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     # Đã xóa mềm thì không thấy nữa.
     assert client.patch(url, json={"status": "published"}, headers=admin).status_code == 404
 
@@ -261,7 +305,11 @@ def test_appeal_lifecycle(client, register, login, seed_video):
     )
     assert (
         client.post(
+<<<<<<< HEAD
+            f"/api/v1/moderation/appeals/00000000-0000-0000-0000-000000000000/decision",
+=======
             "/api/v1/moderation/appeals/00000000-0000-0000-0000-000000000000/decision",
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
             json={"action": "reject"},
             headers=admin,
         ).status_code
@@ -333,6 +381,8 @@ def test_moderator_and_system_stats(client, register):
         ).status_code
         == 404
     )
+<<<<<<< HEAD
+=======
 
 
 def test_moderation_queue_returns_enriched_dto(client, register, seed_video):
@@ -525,3 +575,4 @@ def test_admin_stats_and_overview_summary(client, register, seed_video):
     assert "open_appeals" in summary
     assert "ai_accuracy_rate" in summary
     assert summary["ai_accuracy_rate"] >= 0.0
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

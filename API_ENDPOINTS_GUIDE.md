@@ -223,8 +223,12 @@ Content-Type: application/json
 ```json
 {
   "access_token": "<access_token_from_this_response>",
+<<<<<<< HEAD
+  "token_type": "bearer"
+=======
   "token_type": "bearer",
   "refresh_token": "<refresh_token_from_this_response>"
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 }
 ```
 
@@ -433,12 +437,27 @@ curl http://127.0.0.1:8000/api/v1/videos ^
 - Method: `GET`
 - Path: `/api/v1/feed`
 - Operation ID: `feed`
+<<<<<<< HEAD
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/feed`
+- Chức năng: cursor pagination các video `published`, `public`, chưa bị xóa.
+=======
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/feed?limit=8`
 - Chức năng: Phân trang con trỏ (cursor pagination) danh sách video `published`, `public`, chưa bị xóa phục vụ giao diện xem video ngắn cuộn dọc.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 - Module: Video Management
 - Authentication: Không yêu cầu
 - Role/permission: Không có
 - Content-Type: Không có body
+<<<<<<< HEAD
+- Trạng thái xác minh: **Đã test** — Video Management collection.
+
+**A/B. Path và query parameters**
+
+| Tham số | Kiểu | Bắt buộc | Mặc định | Quy tắc |
+|---|---|---:|---:|---|
+| `limit` | integer | Không | `8` | `1..20`; backend lấy `limit + 1` để tính `has_more` |
+| `cursor` | ISO datetime/null | Không | `null` | Chỉ lấy video có `created_at` nhỏ hơn cursor |
+=======
 - Trạng thái xác minh: **Đã test** — Video Management collection & Pytest.
 
 **A/B. Path và query parameters**
@@ -447,6 +466,7 @@ curl http://127.0.0.1:8000/api/v1/videos ^
 |---|---|---:|---:|---|
 | `limit` | integer | Không | `8` | Giới hạn từ `1..20`. Hỗ trợ gọi các batch nhỏ (ví dụ `limit=2` hoặc `limit=3`) để tối ưu hóa sliding window (cửa sổ trượt DOM 3 phần tử) ở Frontend. Backend truy vấn `limit + 1` bản ghi để xác định cờ `has_more`. |
 | `cursor` | ISO datetime/null | Không | `null` | Chỉ lấy các video có thời gian `created_at` nhỏ hơn cursor (sắp xếp giảm dần theo thời gian tạo). |
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **C. Headers**: Không bắt buộc.
 
@@ -459,7 +479,11 @@ curl http://127.0.0.1:8000/api/v1/videos ^
   "items": [
     {
       "id": "00000000-0000-0000-0000-000000000002",
+<<<<<<< HEAD
+      "caption": "Demo",
+=======
       "caption": "Màn vũ đạo sôi động",
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
       "stream_url": "https://pub-example.r2.dev/videos/<video_id>.mp4",
       "thumbnail_url": "https://pub-example.r2.dev/thumbnails/<video_id>.jpg",
       "allow_comments": true,
@@ -471,6 +495,18 @@ curl http://127.0.0.1:8000/api/v1/videos ^
 }
 ```
 
+<<<<<<< HEAD
+`thumbnail_url` có thể là `null` nếu thumbnail chưa tồn tại. `stream_url`
+trỏ trực tiếp tới CDN R2 khi dùng S3 storage và hỗ trợ Range Request. HTTP
+`200`; `items` có thể là `[]`.
+
+Frontend phải đọc `response.items` trước khi gọi `.map()` và dùng trực tiếp
+`item.stream_url`; không tự ghép `/api/v1/videos/{video_id}/stream` cho Feed.
+
+**F. Lỗi thường gặp**: lỗi kết nối database có thể gây `5xx`; không có lỗi
+nghiệp vụ riêng trong endpoint. `422` nếu `limit` ngoài `1..20` hoặc cursor
+không đúng định dạng.
+=======
 **Quy ước phân trang hữu hạn & Vòng lặp Client (Finite Pagination & Client Loop Contract):**
 - **Tại Backend:** Cơ sở dữ liệu lưu trữ hữu hạn. Khi người dùng cuộn đến trang cuối cùng, Backend sẽ trả về `has_more: false` và `next_cursor: null`.
 - **Hợp đồng với Frontend:** Khi nhận `has_more: false`, Frontend **tuyệt đối không được tiếp tục gửi request lên server** (tránh vòng lặp vô tận gây quá tải hạ tầng). Thay vào đó, Frontend sẽ duy trì danh sách video đã nạp vào client state và tự động quay vòng lại đầu danh sách (looping replay) để duy trì trải nghiệm lướt video ngắn vô tận như TikTok / YouTube Shorts.
@@ -478,11 +514,16 @@ curl http://127.0.0.1:8000/api/v1/videos ^
 - `thumbnail_url`: Có thể là `null` nếu thumbnail chưa được sinh xong.
 
 **F. Lỗi thường gặp**: Lỗi kết nối database có thể gây `5xx`; không có lỗi nghiệp vụ riêng trong endpoint. Trả về `422 Unprocessable Entity` nếu `limit` ngoài khoảng `1..20` hoặc `cursor` không đúng định dạng ISO 8601.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **G. Ví dụ gọi API**
 
 ```bash
+<<<<<<< HEAD
+curl http://127.0.0.1:8000/api/v1/feed
+=======
 curl http://127.0.0.1:8000/api/v1/feed?limit=8
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 ```
 
 ### 3.7.1 Tìm kiếm video theo tag — Grid View
@@ -595,18 +636,30 @@ vào temporary directory cho AI và tự dọn temporary file sau khi xử lý.
 - Path: `/api/v1/videos/{video_id}/ai`
 - Operation ID: `ai_result`
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/videos/<video_id>/ai`
+<<<<<<< HEAD
+- Chức năng: đọc AI job, transcript và labels.
+=======
 - Chức năng: Đọc tiến trình phân tích AI, transcript, nhãn kiểm duyệt và trạng thái cập nhật của video (hỗ trợ polling định kỳ 2 giây/lần ở client).
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 - Module: AI Analysis
 - Authentication: Bắt buộc Bearer JWT
 - Role/permission: Owner, moderator hoặc admin.
 - Content-Type: Không có body
+<<<<<<< HEAD
+- Trạng thái xác minh: **Đã test** — AI Analysis collection.
+=======
 - Trạng thái xác minh: **Đã test** — AI Analysis collection & Pytest integration.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **A. Path parameters**
 
 | Tham số | Kiểu | Bắt buộc | Ý nghĩa |
 |---|---|---:|---|
+<<<<<<< HEAD
+| `video_id` | UUID | Có | ID video cần đọc |
+=======
 | `video_id` | UUID | Có | ID video cần kiểm tra kết quả phân tích AI |
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **B. Query parameters**: Không có.
 
@@ -620,14 +673,59 @@ Authorization: Bearer <access_token>
 
 **E. Response mẫu**
 
+<<<<<<< HEAD
+Khi NSFW-Detection chạy thật và phát hiện vi phạm Adult (video chuyển
+sang `pending_review`):
+=======
 Response Model: `AIResultResponse`
 
 Khi NSFW-Detection phát hiện vi phạm nhạy cảm (Adult):
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 ```json
 {
   "video_id": "00000000-0000-0000-0000-000000000002",
   "job_status": "succeeded",
+<<<<<<< HEAD
+  "transcript": "[NSFW-Detection] phán quyết: ADULT | độ tin cậy: 0.87 | anchor đã đánh giá: 12 | fps: 30.0\n[Speech-to-Text] chưa được triển khai — chưa có transcript âm thanh.",
+  "labels": [
+    {
+      "name": "Adult",
+      "confidence": 0.87,
+      "level": "HIGH"
+    }
+  ]
+}
+```
+
+Khi môi trường AI chưa sẵn sàng và `AI_ANALYSIS_MODE=auto`, job ghi rõ lý do
+và dùng kết quả mock (đã xác minh runtime với Neon):
+
+```json
+{
+  "video_id": "00000000-0000-0000-0000-000000000002",
+  "job_status": "succeeded",
+  "transcript": "[NSFW-Detection chưa sẵn sàng: chưa cài thư viện: tensorflow, torch, cv2, numpy]\nMock transcript for development testing.",
+  "labels": [
+    {
+      "name": "Safe",
+      "confidence": 0.95,
+      "level": "HIGH"
+    }
+  ]
+}
+```
+
+HTTP `200`. Với `AI_ANALYSIS_MODE=required` và môi trường AI chưa sẵn sàng,
+`job_status` là `failed` và `job.error_message` chứa lý do.
+
+**F. Lỗi thường gặp**
+
+- `401`: thiếu/sai JWT.
+- `404`: video không tồn tại, đã xóa hoặc không thuộc owner và caller không
+  phải moderator/admin.
+- `422`: `video_id` không phải UUID.
+=======
   "transcript": "[NSFW-Detection] phán quyết: ADULT | độ tin cậy: 0.73 | anchor đã đánh giá: 25 | fps: 30.0\n[Speech-to-Text] chưa được triển khai — chưa có transcript âm thanh.\n[Chưa triển khai] violence: bộ nhận diện Violence chưa được triển khai\n[Chưa triển khai] sound: bộ nhận diện Sound/Audio chưa được triển khai\n[Chưa triển khai] text: bộ nhận diện Text (Speech-to-Text + Text Analysis) chưa được triển khai",
   "labels": [
     {
@@ -689,6 +787,7 @@ Sau khi tiến trình AI nền hoàn tất phân tích video, hệ thống tự 
 - `401 Unauthorized`: Thiếu hoặc sai Bearer JWT token.
 - `404 Not Found`: Video không tồn tại, đã bị xóa mềm, hoặc video thuộc người khác mà người gọi không có quyền moderator/admin.
 - `422 Unprocessable Entity`: `video_id` không phải định dạng UUID hợp lệ.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **G. Ví dụ gọi API**
 
@@ -813,12 +912,20 @@ curl -X POST http://127.0.0.1:8000/api/v1/videos/<video_id>/reports ^
 - Path: `/api/v1/moderation/queue`
 - Operation ID: `moderation_queue`
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/moderation/queue`
+<<<<<<< HEAD
+- Chức năng: liệt kê video `pending_review`, chưa bị xóa.
+=======
 - Chức năng: Liệt kê các video đang ở trạng thái `pending_review` (chờ duyệt) kèm dữ liệu tổng hợp giàu ngữ cảnh từ AI và báo cáo người dùng (UC012).
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 - Module: Moderation
 - Authentication: Bắt buộc Bearer JWT
 - Role/permission: `moderator` hoặc `admin`.
 - Content-Type: Không có body
+<<<<<<< HEAD
+- Trạng thái xác minh: **Đã test** — Moderation collection.
+=======
 - Trạng thái xác minh: **Đã test** — Test suite `test_labels_appeals_admin.py` & Pytest integration.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **A/B. Path và query parameters**: Không có.
 
@@ -830,6 +937,14 @@ Authorization: Bearer <moderator_or_admin_token>
 
 **D. Request body**: Không có.
 
+<<<<<<< HEAD
+**E. Response**: HTTP `200`, mảng `VideoResponse`; có thể là `[]`.
+
+**F. Lỗi thường gặp**
+
+- `401`: thiếu/sai JWT.
+- `403`: user không có role moderator/admin.
+=======
 **E. Response mẫu**
 
 Response Model: `list[ModerationQueueItemResponse]`
@@ -887,6 +1002,7 @@ Response Model: `list[ModerationQueueItemResponse]`
 
 - `401 Unauthorized`: Thiếu hoặc sai Bearer JWT token.
 - `403 Forbidden`: Người dùng không có role `moderator` hoặc `admin`.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **G. Ví dụ gọi API**
 
@@ -903,14 +1019,25 @@ curl http://127.0.0.1:8000/api/v1/moderation/queue ^
 - Path: `/api/v1/moderation/videos/{video_id}/decision`
 - Operation ID: `moderation_decision`
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/moderation/videos/<video_id>/decision`
+<<<<<<< HEAD
+- Chức năng: moderator/admin approve hoặc reject video.
+=======
 - Chức năng: Moderator/Admin phê duyệt (`approve`) hoặc từ chối (`reject`) video trong hàng đợi kiểm duyệt (UC014).
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 - Module: Moderation
 - Authentication: Bắt buộc Bearer JWT
 - Role/permission: `moderator` hoặc `admin`.
 - Content-Type: `application/json`
+<<<<<<< HEAD
+- Trạng thái xác minh: **Code/OpenAPI** — route/schema đã đối chiếu; chưa có
+  request Newman riêng cho endpoint này.
+
+**A. Path parameters**: `video_id` — UUID, bắt buộc.
+=======
 - Trạng thái xác minh: **Đã test** — Test suite `test_labels_appeals_admin.py`.
 
 **A. Path parameters**: `video_id` — UUID của video cần phán quyết, bắt buộc.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **B. Query parameters**: Không có.
 
@@ -923,6 +1050,31 @@ Content-Type: application/json
 
 **D. Request body**
 
+<<<<<<< HEAD
+```json
+{
+  "action": "approve",
+  "reason": "Review completed"
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Giá trị |
+|---|---|---:|---|
+| `action` | enum | Có | `approve` hoặc `reject` |
+| `reason` | string/null | Không | Tối đa 1000 ký tự; mặc định `null` |
+
+`approve` chuyển video sang `published`; action khác hợp lệ là `reject`, chuyển
+sang `rejected`. Endpoint lưu `ModerationReview`.
+
+**E. Response**: HTTP `204 No Content`.
+
+**F. Lỗi thường gặp**
+
+- `401`: thiếu/sai JWT.
+- `403`: không phải moderator/admin.
+- `404`: video không tồn tại hoặc đã xóa.
+- `422`: UUID hoặc action/reason sai schema.
+=======
 Request Model: `ModerationDecisionRequest`
 
 ```json
@@ -950,10 +1102,17 @@ Request Model: `ModerationDecisionRequest`
 - `403 Forbidden`: Người gọi không có role `moderator` hoặc `admin`.
 - `404 Not Found`: Video không tồn tại hoặc đã bị xóa mềm (`is_deleted = true`).
 - `422 Unprocessable Entity`: UUID sai định dạng, `action` không hợp lệ, hoặc chọn `"reject"` nhưng bỏ trống trường `reason`.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 **G. Ví dụ gọi API**
 
 ```bash
+<<<<<<< HEAD
+curl -X POST http://127.0.0.1:8000/api/v1/moderation/videos/<video_id>/decision ^
+  -H "Authorization: Bearer <moderator_or_admin_token>" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"action\":\"approve\",\"reason\":\"Review completed\"}"
+=======
 # Từ chối video (bắt buộc kèm reason)
 curl -X POST "http://127.0.0.1:8000/api/v1/moderation/videos/<video_id>/decision" ^
   -H "Authorization: Bearer <moderator_token>" ^
@@ -965,6 +1124,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/moderation/videos/<video_id>/decision
   -H "Authorization: Bearer <moderator_token>" ^
   -H "Content-Type: application/json" ^
   -d "{"action":"approve"}"
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 ```
 
 ### 3.13 Danh sách report mở
@@ -1075,6 +1235,19 @@ curl -X POST http://127.0.0.1:8000/api/v1/moderation/reports/<report_id>/decisio
 - Method: `GET`
 - Path: `/api/v1/admin/users`
 - Operation ID: `admin_list_users`
+<<<<<<< HEAD
+- Full URL mẫu: `http://127.0.0.1:8000/api/v1/admin/users?search=Managed`
+- Chức năng: Admin xem danh sách user và tìm theo email/display name.
+- Module: Admin Management
+- Authentication: Bearer JWT
+- Role/permission: `admin`
+- Trạng thái xác minh: **Đã test** — Admin Management Newman.
+
+**Parameters and headers**
+
+- Query `search`: string, không bắt buộc; tìm theo `email` hoặc `display_name`.
+- Không có path parameter hoặc request body.
+=======
 - Full URL mẫu: `http://127.0.0.1:8000/api/v1/admin/users?role=user&status=active&search=Managed&skip=0&limit=50`
 - Chức năng: Admin xem danh sách user, tìm kiếm theo email/display name, lọc theo vai trò (`role`) và trạng thái hoạt động (`status`/`is_active`), hỗ trợ phân trang (`skip`, `limit`).
 - Module: Admin Management
@@ -1091,10 +1264,19 @@ curl -X POST http://127.0.0.1:8000/api/v1/moderation/reports/<report_id>/decisio
   - `is_active`: boolean (`true`, `false`), không bắt buộc; lọc theo cờ hoạt động.
   - `skip`: integer (mặc định `0`, >= 0); offset phân trang.
   - `limit`: integer (mặc định `50`, từ 1 đến 100); số bản ghi mỗi trang.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 - Header: `Authorization: Bearer <admin_token>`.
 
 **Response và lỗi**
 
+<<<<<<< HEAD
+- HTTP `200`, mảng user summary gồm `id`, `display_name`, `role`, `is_active`,
+  `created_at`.
+- `401` token thiếu/sai hoặc user inactive; `403` không phải admin.
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/admin/users?search=Managed" ^
+=======
 - HTTP `200`, mảng user summary:
   ```json
   [
@@ -1112,6 +1294,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/moderation/reports/<report_id>/decisio
 
 ```bash
 curl "http://127.0.0.1:8000/api/v1/admin/users?role=user&status=banned" ^
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   -H "Authorization: Bearer <admin_token>"
 ```
 
@@ -1140,6 +1323,14 @@ curl http://127.0.0.1:8000/api/v1/admin/users/<user_id> ^
 - Authentication: Bearer JWT, role `admin`
 - Path `user_id`: UUID, bắt buộc.
 - Content-Type: `application/json`
+<<<<<<< HEAD
+- Body: `{"is_active": false}` hoặc `{"is_active": true}`; `is_active` bắt buộc
+  là boolean.
+- Response: HTTP `200`, user detail sau cập nhật.
+- Lỗi: `400` nếu admin tự khóa chính mình; `401`, `403`, `404`, `422` theo auth,
+  quyền, ID và schema.
+- Trạng thái xác minh: **Đã test** — Admin Management Newman.
+=======
 - Body: Hỗ trợ linh hoạt cả 2 định dạng:
   - Boolean: `{"is_active": false}` (khóa) hoặc `{"is_active": true}` (mở khóa).
   - String status: `{"status": "banned"}` (khóa) hoặc `{"status": "active"}` (mở khóa).
@@ -1149,12 +1340,17 @@ curl http://127.0.0.1:8000/api/v1/admin/users/<user_id> ^
   - Admin không thể tự khóa chính mình (`403 Forbidden`).
 - Lỗi: `400` / `403` nếu admin tự khóa tài khoản của mình; `401`, `403`, `404`, `422` theo auth, quyền, ID và schema.
 - Trạng thái xác minh: **Đã test** — Pytest `test_admin_user_management_filters_and_banning`.
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 ```bash
 curl -X PATCH http://127.0.0.1:8000/api/v1/admin/users/<user_id>/status ^
   -H "Authorization: Bearer <admin_token>" ^
   -H "Content-Type: application/json" ^
+<<<<<<< HEAD
+  -d "{\"is_active\":false}"
+=======
   -d "{"status":"banned"}"
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 ```
 
 ### 3.18 Admin xem danh sách moderator
@@ -1197,6 +1393,8 @@ curl -X PATCH http://127.0.0.1:8000/api/v1/admin/users/<user_id>/role ^
   -d "{\"role\":\"moderator\"}"
 ```
 
+<<<<<<< HEAD
+=======
 ### 3.19.1 Admin tra cứu nhật ký kiểm duyệt & kiểm toán hệ thống (Audit Logs)
 
 **Thông tin chung**
@@ -1252,6 +1450,7 @@ curl "http://127.0.0.1:8000/api/v1/admin/audit-logs?action=reject" ^
   -H "Authorization: Bearer <admin_token>"
 ```
 
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 ### 3.20 Phát video (stream)
 
 **Thông tin chung**
@@ -1292,6 +1491,8 @@ curl "http://127.0.0.1:8000/api/v1/admin/audit-logs?action=reject" ^
 curl -OJ http://127.0.0.1:8000/api/v1/videos/<video_id>/stream
 ```
 
+<<<<<<< HEAD
+=======
 ### 3.21 Gửi khiếu nại video (Appeals - UC011)
 
 **Thông tin chung**
@@ -1806,6 +2007,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/videos/76ec9d15-0691-44fe-9337-674e2a
 
 ---
 
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 ## 4. Luồng gọi API thực tế
 
 ### 4.1 Tạo user và đọc profile
@@ -1870,6 +2072,8 @@ curl -X POST "http://127.0.0.1:8000/api/v1/videos/76ec9d15-0691-44fe-9337-674e2a
 | 25 | GET | `/api/v1/admin/moderators` | Admin Management | JWT + admin | Đã test |
 | 26 | PATCH | `/api/v1/admin/users/{user_id}/role` | Admin Management | JWT + admin | Đã test |
 | 27 | GET | `/api/v1/videos/{video_id}/stream` | Video Management | Không (JWT nếu chưa published) | Đã test |
+<<<<<<< HEAD
+=======
 | 28 | POST | `/api/v1/videos/{video_id}/appeals` | Appeals / Re-review | JWT + owner | Đã test |
 | 29 | GET | `/api/v1/moderation/appeals` | Moderation Appeals | JWT + mod/admin | Đã test |
 | 30 | POST | `/api/v1/moderation/appeals/{appeal_id}/decision` | Moderation Appeals | JWT + mod/admin | Đã test |
@@ -1885,6 +2089,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/videos/76ec9d15-0691-44fe-9337-674e2a
 | 40 | POST | `/api/v1/auth/password/forgot` | Auth | Không | Đã test |
 | 41 | POST | `/api/v1/auth/password/reset` | Auth | Không | Đã test |
 | 42 | POST | `/api/v1/videos/{video_id}/views` | Video Management | Tùy chọn (JWT/IP) | Đã test |
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 ## 6. Đối chiếu và giới hạn
 
@@ -1895,7 +2100,11 @@ curl -X POST "http://127.0.0.1:8000/api/v1/videos/76ec9d15-0691-44fe-9337-674e2a
   pagination/search/filter chung.
 - File video chỉ lấy được qua endpoint stream; `storage_path` không
   được trả ra trong `VideoResponse`.
+<<<<<<< HEAD
+- Không có logout, token revocation, refresh token hoặc password recovery.
+=======
 - Đã hoàn tất hỗ trợ đầy đủ cơ chế logout, thu hồi token (blacklist JTI), xoay vòng refresh token và quy trình khôi phục mật khẩu (password recovery).
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 - `PATCH /api/v1/videos/{video_id}` không cho phép đổi file, view count, like
   count hoặc audit data.
 - Endpoint quyết định video moderation đã đối chiếu source/OpenAPI nhưng chưa có

@@ -7,6 +7,8 @@ const TITLES = {
   '/': 'Dành cho bạn',
   '/upload': 'Tải video',
   '/profile': 'Hồ sơ của bạn',
+  '/bookmarks': 'Video đã lưu',
+  '/admin': 'Quản trị hệ thống',
   '/moderation': 'Hàng đợi kiểm duyệt',
   '/edit-video': 'Chỉnh sửa video',
 }

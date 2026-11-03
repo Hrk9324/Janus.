@@ -164,12 +164,16 @@ export default function EditVideoPage() {
               <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nhập tiêu đề video" />
             </label>
             <label className="field">
-              <span>Hiển thị</span>
+              <span>Chế độ hiển thị</span>
               <select className="text-input" value={visibility} onChange={(e) => setVisibility(e.target.value)}>
                 <option value="public">Công khai</option>
                 <option value="private">Riêng tư</option>
               </select>
             </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+              <input type="checkbox" checked={allowComments} onChange={(e) => setAllowComments(e.target.checked)} />
+              <span>Cho phép bình luận</span>
+            </div>
             <label className="field">
               <span>
                 <input type="checkbox" checked={allowComments} onChange={(e) => setAllowComments(e.target.checked)} /> Cho phép bình luận

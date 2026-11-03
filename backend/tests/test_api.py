@@ -80,13 +80,21 @@ def test_profile_returns_authenticated_user_contract(client):
     response = client.get("/api/v1/profile", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
+<<<<<<< HEAD
+    assert set(response.json()) == {"id", "email", "display_name", "role"}
+=======
     assert {"id", "email", "display_name", "role"} <= set(response.json())
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     assert response.json()["display_name"] == "Profile User"
     assert response.json()["role"] == "user"
 
 
 def test_duplicate_report_is_rejected(client, real_video_path):
+<<<<<<< HEAD
+    user = client.post(
+=======
     client.post(
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         "/api/v1/auth/register",
         json={"email": "user@example.com", "display_name": "User", "password": "password123"},
     )
@@ -423,12 +431,18 @@ def test_ai_analysis_returns_mock_result_and_enforces_video_ownership(client, re
 
     assert owner_result.status_code == 200
     assert owner_result.json()["job_status"] == "succeeded"
+<<<<<<< HEAD
+    # Khi NSFW-Detection chưa sẵn sàng, transcript thêm dòng lý do trước kết quả mock.
+    assert "Mock transcript for development testing." in owner_result.json()["transcript"]
+    assert owner_result.json()["labels"] == [{"name": "Safe", "confidence": 0.95, "level": "HIGH"}]
+=======
     assert owner_result.json()["transcript"]
     labels = owner_result.json()["labels"]
     assert labels[0]["name"] == "Safe"
     assert 0 <= labels[0]["confidence"] <= 1
     assert labels[0]["level"] in {"LOW", "MEDIUM", "HIGH"}
     assert labels[0]["source"] == "ai"
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     assert other_result.status_code == 404
     assert missing_token.status_code == 401
     assert invalid_id.status_code == 422
@@ -475,7 +489,11 @@ def test_video_management_lists_owned_videos_and_enforces_delete_ownership(clien
     assert uploaded.status_code == 201
     assert any(item["id"] == video_id for item in owner_list.json())
     assert public_feed.status_code == 200
+<<<<<<< HEAD
+    assert isinstance(public_feed.json(), list)
+=======
     assert isinstance(public_feed.json()["items"], list)
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     assert other_delete.status_code == 404
     assert owner_delete.status_code == 204
     assert all(item["id"] != video_id for item in after_delete.json())

@@ -4,6 +4,8 @@ import Icon from '@/shared/components/Icon'
 import { recordVideoView } from '../api/videosApi'
 import ReportDialog from './ReportDialog'
 import CommentDrawer from './CommentDrawer'
+import { toggleLike, toggleFollow, toggleBookmark } from '../api/socialApi'
+import { useAuth } from '@/features/auth/AuthContext'
 
 function formatViewCount(num) {
   const n = Number(num) || 0
@@ -42,12 +44,14 @@ export default function VideoSlide({
   const [showComments, setShowComments] = useState(false)
   const [liked, setLiked] = useState(false)
   const [followed, setFollowed] = useState(false)
+  const [bookmarked, setBookmarked] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const [currentViews, setCurrentViews] = useState(
     Number(video.view_count ?? video.views ?? video.play_count ?? 0)
   )
   const hasCountedRef = useRef(false)
+  const { isAuthenticated } = useAuth()
 
   const isActive =
     propIsActive !== undefined
@@ -65,6 +69,7 @@ export default function VideoSlide({
     setPlaying(false)
     setLiked(false)
     setFollowed(false)
+    setBookmarked(false)
     setMuted(true)
     setVolume(0.5)
     setShowVolume(false)
@@ -135,6 +140,42 @@ export default function VideoSlide({
     } else {
       element.pause()
       setPlaying(false)
+    }
+  }
+
+  async function handleLike() {
+    if (!isAuthenticated) return
+    const previous = liked
+    setLiked(!previous)
+    try {
+      const result = await toggleLike(video.id)
+      setLiked(Boolean(result.is_liked))
+    } catch {
+      setLiked(previous)
+    }
+  }
+
+  async function handleFollow() {
+    if (!isAuthenticated || !video.owner_id) return
+    const previous = followed
+    setFollowed(!previous)
+    try {
+      const result = await toggleFollow(video.owner_id)
+      setFollowed(Boolean(result.is_following))
+    } catch {
+      setFollowed(previous)
+    }
+  }
+
+  async function handleBookmark() {
+    if (!isAuthenticated) return
+    const previous = bookmarked
+    setBookmarked(!previous)
+    try {
+      const result = await toggleBookmark(video.id)
+      setBookmarked(Boolean(result.is_bookmarked))
+    } catch {
+      setBookmarked(previous)
     }
   }
 
@@ -281,7 +322,8 @@ export default function VideoSlide({
           <button
             type="button"
             className={`slide-follow ${followed ? 'active' : ''}`}
-            onClick={() => setFollowed((v) => !v)}
+            onClick={handleFollow}
+            disabled={!isAuthenticated || !video.owner_id}
           >
             {followed ? 'Đang theo dõi' : 'Theo dõi'}
           </button>
@@ -297,11 +339,21 @@ export default function VideoSlide({
         <button
           type="button"
           className={`rail-button ${liked ? 'active' : ''}`}
-          onClick={() => setLiked((v) => !v)}
+          onClick={handleLike}
           aria-label="Thích"
         >
           <Icon name={liked ? 'heart-filled' : 'heart'} size={22} />
           <span>{(likeCount + (liked ? 1 : 0)).toLocaleString('vi-VN')}</span>
+        </button>
+        <button
+          type="button"
+          className={`rail-button ${bookmarked ? 'active' : ''}`}
+          onClick={handleBookmark}
+          aria-label={bookmarked ? 'Bỏ lưu video' : 'Lưu video'}
+          disabled={!isAuthenticated}
+        >
+          <Icon name="bookmark" size={21} />
+          <span>{bookmarked ? 'Đã lưu' : 'Lưu'}</span>
         </button>
         <button
           type="button"
