@@ -22,6 +22,7 @@ repository.
 - [Technology stack](#technology-stack)
 - [Repository structure](#repository-structure)
 - [Prerequisites](#prerequisites)
+- [Hướng dẫn cài đặt & Khởi chạy dự án (1-Click Dev)](#hướng-dẫn-cài-đặt--khởi-chạy-dự-án-1-click-dev)
 - [Local setup](#local-setup)
 - [Running the backend](#running-the-backend)
 - [Database and migrations](#database-and-migrations)
@@ -247,6 +248,48 @@ Install or make available:
 PowerShell is used in the examples below. Do not use production credentials or
 production databases for local development or tests.
 
+## Hướng dẫn cài đặt & Khởi chạy dự án (1-Click Dev)
+
+Dự án cung cấp bộ script tự động hóa khởi chạy toàn bộ hệ thống (Backend + Frontend) chỉ với **1 lệnh duy nhất** trên cả Windows, Linux và macOS.
+
+### 1. Khởi chạy nhanh theo Hệ điều hành
+
+#### Windows
+- **Cách 1 (PowerShell):**
+  ```powershell
+  .\run_dev.ps1
+  ```
+- **Cách 2 (Batch script tiện ích):**
+  Nhấp đúp chuột vào file `run_dev.bat` trong thư mục gốc dự án.
+
+#### Linux / macOS
+- **Cấp quyền thực thi lần đầu:**
+  ```bash
+  chmod +x run_dev.sh
+  ```
+- **Khởi chạy:**
+  ```bash
+  ./run_dev.sh
+  ```
+
+### 2. Các hành động tự động hóa mà script thực hiện ngầm
+- **Kiểm tra công cụ môi trường:** Xác nhận sự hiện diện của `uv`, `node` và `npm`.
+- **Tự động đồng bộ thư viện Backend (`uv sync`):** Cập nhật toàn bộ dependencies Python từ `pyproject.toml` và `uv.lock`.
+- **Tự động kiểm tra & cài đặt dependencies Frontend:** Tự kiểm tra `frontend/node_modules` và chạy `npm --prefix frontend install` nếu chưa có.
+- **Tự động chạy migration Database (Alembic):** Luôn tự động thực thi `uv run --directory backend alembic upgrade head` để đảm bảo cơ sở dữ liệu luôn ở phiên bản mới nhất trước khi server chạy. Nếu migration lỗi, script dừng ngay lập tức để tránh lỗi runtime.
+- **Khởi chạy song song Backend & Frontend:** Chạy song song Uvicorn (FastAPI) trên cổng `8000` và Vite (React) trên cổng `5173`.
+- **Tự động dọn dẹp sạch tiến trình & port khi thoát (`Ctrl + C`):** Bắt sự kiện thoát (SIGINT / finally), tự động đóng toàn bộ tiến trình con và giải phóng cổng `8000` cùng `5173`, chống kẹt port triệt để.
+
+### 3. Bảng URL truy cập mặc định
+
+| Dịch vụ | Địa chỉ URL | Mô tả |
+|---|---|---|
+| **Frontend** | `http://localhost:5173` | Giao diện web người dùng (Vite + React) |
+| **Backend API** | `http://127.0.0.1:8000` | Dịch vụ API Backend (FastAPI) |
+| **Swagger Docs** | `http://127.0.0.1:8000/docs` | Tài liệu tương tác API OpenAPI / Swagger UI |
+
+---
+
 ## Local setup
 
 ### 1. Clone and create the uv environment
@@ -296,6 +339,9 @@ gốc repo với `uv run --directory backend ...`).
 ```
 
 ## Chạy frontend và kết nối backend
+
+> [!TIP]
+> **Khuyên dùng:** Bạn có thể khởi chạy nhanh toàn bộ hệ thống bằng 1 click thông qua các script `run_dev.bat` / `run_dev.ps1` (Windows) hoặc `run_dev.sh` (Linux/macOS) đã được thiết lập sẵn ở thư mục gốc (xem chi tiết tại mục [Hướng dẫn cài đặt & Khởi chạy dự án](#hướng-dẫn-cài-đặt--khởi-chạy-dự-án-1-click-dev)). Nếu muốn chạy thủ công từng phần độc lập bằng 2 terminal riêng biệt, thực hiện như sau:
 
 Backend (cửa sổ 1):
 
