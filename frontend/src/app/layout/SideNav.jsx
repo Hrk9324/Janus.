@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 const NAV_ITEMS = [
   { to: '/', label: 'Dành cho bạn', icon: 'home', end: true },
   { to: '/moderation', label: 'Kiểm duyệt', icon: 'shield', roles: ['moderator', 'admin'] },
+  { to: '/admin', label: 'Quản trị', icon: 'user', roles: ['admin'] },
 ]
 
 const SEARCH_HISTORY = ['video ngắn', 'kiểm duyệt', 'janus']
@@ -17,6 +18,16 @@ const SEARCH_SUGGEST = ['video hot', 'nội dung mới', 'xu hướng']
 export default function SideNav() {
   const { user, isAuthenticated, logout } = useAuth()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const navigate = useNavigate()
+
+  function searchTag(value = searchText) {
+    const tag = value.trim().replace(/^#/, '')
+    if (!tag) return
+    navigate(`/?tag=${encodeURIComponent(tag)}`)
+    setSearchText(tag)
+    setSearchOpen(false)
+  }
 
   return (
     <aside className="sidenav">
@@ -30,16 +41,16 @@ export default function SideNav() {
       </div>
 
       <div className="nav-search-wrap">
-        <div className="nav-search">
+        <form className="nav-search" onSubmit={(event) => {event.preventDefault();searchTag()}}>
           <Icon name="search" size={16} />
-          <input type="text" placeholder="Tìm kiếm" onFocus={() => setSearchOpen(true)} onBlur={() => setTimeout(() => setSearchOpen(false), 150)} />
-        </div>
+          <input type="search" value={searchText} placeholder="Tìm video theo nhãn" onChange={(event)=>setSearchText(event.target.value)} onFocus={() => setSearchOpen(true)} onBlur={() => setTimeout(() => setSearchOpen(false), 150)} />
+        </form>
         {searchOpen && (
           <div className="search-dropdown">
             <div className="search-section">
               <div className="search-section-title">Lịch sử tìm kiếm</div>
               {SEARCH_HISTORY.map((item) => (
-                <button key={item} type="button" className="search-item">
+                <button key={item} type="button" className="search-item" onMouseDown={(event)=>event.preventDefault()} onClick={()=>searchTag(item)}>
                   <Icon name="clock" size={14} />
                   <span>{item}</span>
                 </button>
@@ -48,7 +59,7 @@ export default function SideNav() {
             <div className="search-section">
               <div className="search-section-title">Gợi ý</div>
               {SEARCH_SUGGEST.map((item) => (
-                <button key={item} type="button" className="search-item">
+                <button key={item} type="button" className="search-item" onMouseDown={(event)=>event.preventDefault()} onClick={()=>searchTag(item)}>
                   <Icon name="search" size={14} />
                   <span>{item}</span>
                 </button>
@@ -87,6 +98,10 @@ export default function SideNav() {
             <NavLink to="/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <Icon name="user" size={18} />
               <span>Hồ sơ</span>
+            </NavLink>
+            <NavLink to="/bookmarks" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <Icon name="bookmark" size={18} />
+              <span>Video đã lưu</span>
             </NavLink>
           </>
         )}

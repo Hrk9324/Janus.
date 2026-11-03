@@ -21,15 +21,10 @@ from app.models import (
 from app.schemas import (
     ConfirmLabelsRequest,
     LabelResponse,
-<<<<<<< HEAD
-    VideoLabelsResponse,
-)
-=======
     ReplaceVideoLabelsRequest,
     VideoLabelsResponse,
 )
 from app.services.ai_service import confidence_level
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 def _get_video(db: Session, video_id: UUID) -> Video:
@@ -145,8 +140,6 @@ def confirm_video_labels(
         labels=_label_response(video),
         moderation_required=moderation_required,
     )
-<<<<<<< HEAD
-=======
 
 
 def replace_video_labels(
@@ -182,4 +175,3 @@ def replace_video_labels(
     db.refresh(video)
     video = _get_video(db, video_id)
     return _label_response(video)
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

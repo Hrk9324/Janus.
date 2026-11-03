@@ -1,15 +1,4 @@
 from datetime import datetime
-<<<<<<< HEAD
-from uuid import UUID, uuid4
-
-from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.models.base import Base, utcnow
-from app.models.enums import ModerationAction, ReportStatus
-from app.models.video import Video
-
-=======
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -24,7 +13,6 @@ from app.models.video import Video
 if TYPE_CHECKING:
     from app.models.user import User
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 class ModerationReview(Base):
     __tablename__ = "moderation_reviews"
@@ -37,10 +25,7 @@ class ModerationReview(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     video: Mapped[Video] = relationship(back_populates="moderation_reviews")
-<<<<<<< HEAD
-=======
     moderator: Mapped["User | None"] = relationship(foreign_keys=[moderator_id])
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 class Report(Base):
@@ -62,8 +47,6 @@ class Report(Base):
         if self.video is None:
             return None
         return self.video.caption or self.video.original_filename
-<<<<<<< HEAD
-=======
 
 
 class Appeal(Base):
@@ -98,4 +81,3 @@ class Appeal(Base):
     @property
     def user_display_name(self) -> str | None:
         return self.user.display_name if self.user else None
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

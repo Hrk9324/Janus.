@@ -10,13 +10,6 @@ const JOB_LABEL = {
 }
 
 /**
-<<<<<<< HEAD
- * Hiển thị kết quả phân tích THẬT từ GET /v1/videos/{id}/ai.
- * Panel tự poll cho tới khi job kết thúc (backend chạy job nền).
- */
-export default function AiResultPanel({ videoId }) {
-  const { result, loading, error } = useAiAnalysis(videoId)
-=======
  * Phân tích và cấu trúc hóa chuỗi log / transcript từ pipeline AI.
  * Loại bỏ thông tin đường dẫn nội bộ và bóc tách thành các module trực quan.
  */
@@ -207,7 +200,6 @@ export default function AiResultPanel({ videoId, result: propResult, loading: pr
   const result = propResult !== undefined ? propResult : internal.result
   const loading = propLoading !== undefined ? propLoading : internal.loading
   const error = internal.error
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
   if (!videoId) return null
 
@@ -246,15 +238,9 @@ export default function AiResultPanel({ videoId, result: propResult, loading: pr
 
           <div className="ai-transcript">
             <span className="ai-transcript-title">
-<<<<<<< HEAD
-              <Icon name="spark" size={13} /> BẢN CHÉP LỜI
-            </span>
-            <p>{result.transcript || 'Không có bản chép lời cho video này.'}</p>
-=======
               <Icon name="spark" size={13} /> CHI TIẾT PHÂN TÍCH & BẢN CHÉP LỜI
             </span>
             <FormattedTranscript transcript={result.transcript} />
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
           </div>
         </>
       )}

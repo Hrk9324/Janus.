@@ -4,13 +4,6 @@ import { EmptyState, ErrorNote, Spinner } from '@/shared/components/Feedback'
 import { useFeed } from '../hooks/useFeed'
 import VideoSlide from './VideoSlide'
 
-<<<<<<< HEAD
-/** Feed dọc kiểu TikTok: mỗi video chiếm trọn khung, cuộn snap giữa các video. */
-export default function VideoFeed() {
-  const { videos, loading, error, refresh } = useFeed()
-  const containerRef = useRef(null)
-  const [activeIndex, setActiveIndex] = useState(0)
-=======
 /**
  * Feed cuộn dọc toàn màn hình kiểu TikTok (Snap-scrolling).
  * Áp dụng cơ chế Cửa sổ trượt (Sliding Window): Chỉ mount video cho slide đang xem
@@ -20,7 +13,6 @@ export default function VideoFeed() {
   const [activeIndex, setActiveIndex] = useState(0)
   const { videos, loading, error, refresh } = useFeed(activeIndex)
   const containerRef = useRef(null)
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
   useEffect(() => {
     const container = containerRef.current
@@ -31,23 +23,12 @@ export default function VideoFeed() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-<<<<<<< HEAD
-          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
-=======
           if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
             const index = slides.indexOf(entry.target)
             if (index >= 0) setActiveIndex(index)
           }
         })
       },
-<<<<<<< HEAD
-      { root: container, threshold: [0.6] },
-    )
-
-    slides.forEach((slide) => observer.observe(slide))
-    return () => observer.disconnect()
-=======
       { root: container, threshold: [0.5, 0.75] },
     )
 
@@ -70,7 +51,6 @@ export default function VideoFeed() {
       observer.disconnect()
       container.removeEventListener('scroll', handleScroll)
     }
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   }, [videos])
 
   if (loading) {
@@ -112,19 +92,6 @@ export default function VideoFeed() {
   return (
     <div className="feed-wrapper">
       <div className="feed" ref={containerRef}>
-<<<<<<< HEAD
-        {videos.map((video) => (
-          <VideoSlide key={video.id} video={video} onReported={refresh} />
-        ))}
-      </div>
-      {videos.length > 1 && (
-        <div className="feed-progress">
-          {videos.map((_, index) => (
-            <span key={index} className={`feed-progress-dot ${index === activeIndex ? 'active' : ''}`} />
-          ))}
-        </div>
-      )}
-=======
         {videos.map((video, index) => (
           <VideoSlide
             key={video._loopKey || video.id}
@@ -137,7 +104,6 @@ export default function VideoFeed() {
           />
         ))}
       </div>
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     </div>
   )
 }

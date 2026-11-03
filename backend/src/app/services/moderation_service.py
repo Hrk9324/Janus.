@@ -1,33 +1,20 @@
-<<<<<<< HEAD
-"""Nghiệp vụ báo cáo và kiểm duyệt."""
-=======
 """Nghiệp vụ báo cáo, khiếu nại và kiểm duyệt."""
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-<<<<<<< HEAD
-from app.exceptions import ConflictError, NotFoundError
-from app.models import (
-=======
 from app.exceptions import ConflictError, InvalidInputError, NotFoundError
 from app.models import (
     Appeal,
     AppealStatus,
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     ModerationAction,
     ModerationReview,
     Report,
     ReportStatus,
     User,
     Video,
-<<<<<<< HEAD
-    VideoStatus,
-)
-=======
     VideoLabel,
     VideoStatus,
     utcnow,
@@ -35,7 +22,6 @@ from app.models import (
 from app.schemas.moderation import ModerationQueueItemResponse
 from app.schemas.video import LabelResponse
 from app.services.storage_service import get_storage_service
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 def create_report(db: Session, video_id: UUID, reporter: User, reason: str) -> Report:
@@ -61,13 +47,6 @@ def create_report(db: Session, video_id: UUID, reporter: User, reason: str) -> R
     return report
 
 
-<<<<<<< HEAD
-def moderation_queue(db: Session) -> list[Video]:
-    return list(
-        db.scalars(
-            select(Video)
-            .options(selectinload(Video.owner))
-=======
 def moderation_queue(db: Session) -> list[ModerationQueueItemResponse]:
     storage = get_storage_service()
     videos = list(
@@ -79,13 +58,10 @@ def moderation_queue(db: Session) -> list[ModerationQueueItemResponse]:
                 selectinload(Video.reports),
                 selectinload(Video.ai_jobs),
             )
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
             .where(Video.status == VideoStatus.pending_review, Video.is_deleted.is_(False))
             .order_by(Video.created_at)
         )
     )
-<<<<<<< HEAD
-=======
     items: list[ModerationQueueItemResponse] = []
     for video in videos:
         open_reports = [r for r in video.reports if r.status == ReportStatus.open]
@@ -151,30 +127,22 @@ def moderation_queue(db: Session) -> list[ModerationQueueItemResponse]:
         )
         items.append(item)
     return items
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 def decide_video(db: Session, video_id: UUID, moderator: User, action: ModerationAction, reason: str | None) -> None:
     video = db.get(Video, video_id)
     if video is None or video.is_deleted:
         raise NotFoundError("Không tìm thấy video")
-<<<<<<< HEAD
-=======
     if action == ModerationAction.reject and (not reason or not reason.strip()):
         raise InvalidInputError("Lý do từ chối là bắt buộc.")
     clean_reason = reason.strip() if reason else None
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     video.status = VideoStatus.published if action == ModerationAction.approve else VideoStatus.rejected
     db.add(
         ModerationReview(
             video_id=video.id,
             moderator_id=moderator.id,
             action=action,
-<<<<<<< HEAD
-            reason=reason,
-=======
             reason=clean_reason,
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         )
     )
     db.commit()
@@ -207,8 +175,6 @@ def decide_report(db: Session, report_id: UUID, moderator: User, action: Moderat
         )
     )
     db.commit()
-<<<<<<< HEAD
-=======
 
 
 def create_appeal(db: Session, video_id: UUID, user: User, reason: str) -> Appeal:
@@ -285,4 +251,3 @@ def decide_appeal(
         )
     )
     db.commit()
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

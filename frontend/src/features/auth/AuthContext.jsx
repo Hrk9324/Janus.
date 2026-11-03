@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
-import { setToken, getToken } from '@/shared/api/client'
+import { setToken, getToken, getRefreshToken } from '@/shared/api/client'
 import * as authApi from './api/authApi'
 
 const AuthContext = createContext(null)
@@ -55,7 +55,13 @@ export function AuthProvider({ children }) {
     [login],
   )
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const refreshToken = getRefreshToken()
+    try {
+      await authApi.logout(refreshToken)
+    } catch {
+      // Clear the local session even if the backend is unreachable.
+    }
     setToken(null)
     setUser(null)
   }, [])

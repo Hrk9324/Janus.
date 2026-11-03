@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-from pydantic import BaseModel, Field
-
-from app.models.enums import ModerationAction
-=======
 from datetime import datetime
 from uuid import UUID
 
@@ -10,14 +5,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import AppealStatus, ModerationAction
 from app.schemas.video import LabelResponse, VideoResponse
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 class ModerationDecisionRequest(BaseModel):
     action: ModerationAction
     reason: str | None = Field(default=None, max_length=1000)
-<<<<<<< HEAD
-=======
 
     @model_validator(mode="after")
     def validate_reason_if_rejected(self) -> "ModerationDecisionRequest":
@@ -68,4 +60,3 @@ class VideoLabelItem(BaseModel):
 
 class ReplaceVideoLabelsRequest(BaseModel):
     labels: list[VideoLabelItem] = Field(default_factory=list)
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-import { apiFetch } from '@/shared/api/client'
-
-/** Đăng nhập, trả về { access_token, token_type }. */
-export function login(email, password) {
-  return apiFetch('/v1/auth/login', { method: 'POST', body: { email, password }, auth: false })
-=======
 import { apiFetch, setTokens } from '@/shared/api/client'
 
 /**
@@ -24,7 +17,6 @@ export async function login(email, password) {
     })
   }
   return session
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 }
 
 /** Đăng ký, trả về hồ sơ người dùng vừa tạo. */
@@ -36,8 +28,6 @@ export function register({ email, displayName, password }) {
   })
 }
 
-<<<<<<< HEAD
-=======
 /** Làm mới phiên làm việc bằng refresh token (xoay vòng token). */
 export function refreshSession(refreshToken) {
   return apiFetch('/v1/auth/refresh', {
@@ -76,7 +66,6 @@ export function resetPassword(token, newPassword) {
   })
 }
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 /** Lấy hồ sơ của token hiện tại — dùng để khôi phục phiên đăng nhập khi tải lại trang. */
 export function fetchProfile() {
   return apiFetch('/v1/profile')

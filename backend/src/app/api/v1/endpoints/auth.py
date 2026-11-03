@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
-
-from app.core.security import create_access_token
-from app.db.session import get_db
-from app.models import User
-from app.schemas import LoginRequest, TokenResponse, UserCreate, UserResponse
-=======
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -27,7 +18,6 @@ from app.schemas import (
     UserCreate,
     UserResponse,
 )
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -41,9 +31,6 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     user = auth_service.authenticate(db, payload)
-<<<<<<< HEAD
-    return TokenResponse(access_token=create_access_token(user))
-=======
     access_token, refresh_token = auth_service.create_session(db, user)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
@@ -104,4 +91,3 @@ def reset_password(
     db: Session = Depends(get_db),
 ) -> None:
     auth_service.reset_password(db, payload.token, payload.new_password)
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

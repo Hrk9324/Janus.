@@ -1,23 +1,3 @@
-<<<<<<< HEAD
-import { useCallback, useEffect, useState } from 'react'
-
-import { fetchFeed } from '../api/videosApi'
-
-/** Lấy feed công khai + hàm làm mới (dùng lại sau khi tải video hoặc báo cáo). */
-export function useFeed() {
-  const [videos, setVideos] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  const refresh = useCallback(async () => {
-    setError('')
-    try {
-      setVideos(await fetchFeed())
-    } catch (requestError) {
-      setError(requestError.detail || requestError.message)
-    } finally {
-      setLoading(false)
-=======
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { fetchFeed } from '../api/videosApi'
@@ -152,7 +132,6 @@ export function useFeed(activeIndex = 0) {
       })
 
       isFetchingRef.current = false
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     }
   }, [])
 
@@ -160,9 +139,6 @@ export function useFeed(activeIndex = 0) {
     refresh()
   }, [refresh])
 
-<<<<<<< HEAD
-  return { videos, loading, error, refresh }
-=======
   // Tự động kích hoạt loadMore khi người dùng cuộn gần tới cuối danh sách (còn 1-2 video)
   useEffect(() => {
     if (loading || videos.length === 0) return
@@ -179,5 +155,4 @@ export function useFeed(activeIndex = 0) {
     refresh,
     loadMore,
   }
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 }

@@ -5,10 +5,6 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies import require_roles
-<<<<<<< HEAD
-from app.models import Report, User, UserRole, Video
-from app.schemas import ModerationDecisionRequest, ReportResponse, VideoResponse
-=======
 from app.models import Appeal, Report, User, UserRole
 from app.schemas import (
     AppealDecisionRequest,
@@ -17,25 +13,16 @@ from app.schemas import (
     ModerationQueueItemResponse,
     ReportResponse,
 )
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from app.services import moderation_service
 
 router = APIRouter(prefix="/moderation", tags=["moderation"])
 
 
-<<<<<<< HEAD
-@router.get("/queue", response_model=list[VideoResponse])
-def moderation_queue(
-    user: User = Depends(require_roles(UserRole.moderator, UserRole.admin)),
-    db: Session = Depends(get_db),
-) -> list[Video]:
-=======
 @router.get("/queue", response_model=list[ModerationQueueItemResponse])
 def moderation_queue(
     user: User = Depends(require_roles(UserRole.moderator, UserRole.admin)),
     db: Session = Depends(get_db),
 ) -> list[ModerationQueueItemResponse]:
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     return moderation_service.moderation_queue(db)
 
 
@@ -65,8 +52,6 @@ def report_decision(
     db: Session = Depends(get_db),
 ) -> None:
     moderation_service.decide_report(db, report_id, user, payload.action, payload.reason)
-<<<<<<< HEAD
-=======
 
 
 @router.get("/appeals", response_model=list[AppealResponse])
@@ -85,4 +70,3 @@ def appeal_decision(
     db: Session = Depends(get_db),
 ) -> None:
     moderation_service.decide_appeal(db, appeal_id, user, payload.action, payload.reason)
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

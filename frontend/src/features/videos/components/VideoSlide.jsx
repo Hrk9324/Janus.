@@ -1,20 +1,11 @@
-<<<<<<< HEAD
-import { useEffect, useRef, useState } from 'react'
-
-import Icon from '@/shared/components/Icon'
-import { streamUrl } from '../api/videosApi'
-import ReportDialog from './ReportDialog'
-import CommentDrawer from './CommentDrawer'
-
-/** Một video trong feed: bấm để phát/tạm dừng, có các hành động bên phải. */
-export default function VideoSlide({ video, onReported }) {
-=======
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import Icon from '@/shared/components/Icon'
 import { recordVideoView } from '../api/videosApi'
 import ReportDialog from './ReportDialog'
 import CommentDrawer from './CommentDrawer'
+import { toggleLike, toggleFollow, toggleBookmark } from '../api/socialApi'
+import { useAuth } from '@/features/auth/AuthContext'
 
 function formatViewCount(num) {
   const n = Number(num) || 0
@@ -43,7 +34,6 @@ export default function VideoSlide({
   isActive: propIsActive,
   onReported,
 }) {
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   const containerRef = useRef(null)
   const videoRef = useRef(null)
   const volumeRef = useRef(null)
@@ -54,14 +44,14 @@ export default function VideoSlide({
   const [showComments, setShowComments] = useState(false)
   const [liked, setLiked] = useState(false)
   const [followed, setFollowed] = useState(false)
+  const [bookmarked, setBookmarked] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
-<<<<<<< HEAD
-=======
   const [currentViews, setCurrentViews] = useState(
     Number(video.view_count ?? video.views ?? video.play_count ?? 0)
   )
   const hasCountedRef = useRef(false)
+  const { isAuthenticated } = useAuth()
 
   const isActive =
     propIsActive !== undefined
@@ -75,28 +65,22 @@ export default function VideoSlide({
 
   const canMount = shouldMountVideo !== undefined ? shouldMountVideo : isActive || isNext
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   useEffect(() => {
     setPlaying(false)
     setLiked(false)
     setFollowed(false)
+    setBookmarked(false)
     setMuted(true)
     setVolume(0.5)
     setShowVolume(false)
     setShowComments(false)
     setFullscreen(false)
-<<<<<<< HEAD
-=======
     setCurrentViews(Number(video.view_count ?? video.views ?? video.play_count ?? 0))
     hasCountedRef.current = false
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     if (videoRef.current) {
       videoRef.current.muted = true
       videoRef.current.volume = 0.5
     }
-<<<<<<< HEAD
-  }, [video.id])
-=======
   }, [video.id, video.view_count, video.views])
 
   useEffect(() => {
@@ -142,7 +126,6 @@ export default function VideoSlide({
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
   async function togglePlayback() {
     const element = videoRef.current
@@ -157,6 +140,42 @@ export default function VideoSlide({
     } else {
       element.pause()
       setPlaying(false)
+    }
+  }
+
+  async function handleLike() {
+    if (!isAuthenticated) return
+    const previous = liked
+    setLiked(!previous)
+    try {
+      const result = await toggleLike(video.id)
+      setLiked(Boolean(result.is_liked))
+    } catch {
+      setLiked(previous)
+    }
+  }
+
+  async function handleFollow() {
+    if (!isAuthenticated || !video.owner_id) return
+    const previous = followed
+    setFollowed(!previous)
+    try {
+      const result = await toggleFollow(video.owner_id)
+      setFollowed(Boolean(result.is_following))
+    } catch {
+      setFollowed(previous)
+    }
+  }
+
+  async function handleBookmark() {
+    if (!isAuthenticated) return
+    const previous = bookmarked
+    setBookmarked(!previous)
+    try {
+      const result = await toggleBookmark(video.id)
+      setBookmarked(Boolean(result.is_bookmarked))
+    } catch {
+      setBookmarked(previous)
     }
   }
 
@@ -206,17 +225,6 @@ export default function VideoSlide({
     el.requestFullscreen?.().then(() => setFullscreen(true)).catch(() => {})
   }
 
-<<<<<<< HEAD
-  useEffect(() => {
-    function onChange() {
-      setFullscreen(Boolean(document.fullscreenElement))
-    }
-    document.addEventListener('fullscreenchange', onChange)
-    return () => document.removeEventListener('fullscreenchange', onChange)
-  }, [])
-
-  const viewCount = video.views || video.view_count || video.play_count || 0
-=======
   const triggerCountView = useCallback(async () => {
     if (hasCountedRef.current) return
     hasCountedRef.current = true
@@ -258,26 +266,10 @@ export default function VideoSlide({
     }
   }
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   const likeCount = video.likes || video.like_count || 0
 
   return (
     <article className="slide" ref={containerRef}>
-<<<<<<< HEAD
-      <button type="button" className="slide-stage" onClick={togglePlayback} aria-label="Phát hoặc tạm dừng video">
-        <video
-          ref={videoRef}
-          src={streamUrl(video.id)}
-          loop
-          playsInline
-          muted={muted}
-          preload="metadata"
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-        />
-        {!playing && (
-          <span className="slide-play">
-=======
       <button
         type="button"
         className="slide-stage"
@@ -319,7 +311,6 @@ export default function VideoSlide({
         )}
         {!playing && (
           <span className="slide-play" style={!canMount ? { opacity: 0.65 } : undefined}>
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
             <Icon name="play" size={26} />
           </span>
         )}
@@ -328,29 +319,11 @@ export default function VideoSlide({
       <div className="slide-meta">
         <div className="slide-user-row">
           <span className="slide-user">@{video.owner_name || 'janus'}</span>
-<<<<<<< HEAD
-          <button type="button" className={`slide-follow ${followed ? 'active' : ''}`} onClick={() => setFollowed((v) => !v)}>
-            {followed ? 'Đang theo dõi' : 'Theo dõi'}
-          </button>
-        </div>
-        <p className="slide-caption">{video.caption || video.original_filename}</p>
-        <div className="slide-view">
-          <Icon name="play" size={12} />
-          <span>{viewCount.toLocaleString('vi-VN')} lượt xem</span>
-        </div>
-      </div>
-
-      <div className="slide-actions">
-        <button type="button" className={`rail-button ${liked ? 'active' : ''}`} onClick={() => setLiked((v) => !v)} aria-label="Thích">
-          <Icon name={liked ? 'heart-filled' : 'heart'} size={22} />
-          <span>{(likeCount + (liked ? 1 : 0)).toLocaleString('vi-VN')}</span>
-        </button>
-        <button type="button" className="rail-button" aria-label="Bình luận" onClick={() => setShowComments(true)}>
-=======
           <button
             type="button"
             className={`slide-follow ${followed ? 'active' : ''}`}
-            onClick={() => setFollowed((v) => !v)}
+            onClick={handleFollow}
+            disabled={!isAuthenticated || !video.owner_id}
           >
             {followed ? 'Đang theo dõi' : 'Theo dõi'}
           </button>
@@ -366,7 +339,7 @@ export default function VideoSlide({
         <button
           type="button"
           className={`rail-button ${liked ? 'active' : ''}`}
-          onClick={() => setLiked((v) => !v)}
+          onClick={handleLike}
           aria-label="Thích"
         >
           <Icon name={liked ? 'heart-filled' : 'heart'} size={22} />
@@ -374,11 +347,20 @@ export default function VideoSlide({
         </button>
         <button
           type="button"
+          className={`rail-button ${bookmarked ? 'active' : ''}`}
+          onClick={handleBookmark}
+          aria-label={bookmarked ? 'Bỏ lưu video' : 'Lưu video'}
+          disabled={!isAuthenticated}
+        >
+          <Icon name="bookmark" size={21} />
+          <span>{bookmarked ? 'Đã lưu' : 'Lưu'}</span>
+        </button>
+        <button
+          type="button"
           className="rail-button"
           aria-label="Bình luận"
           onClick={() => setShowComments(true)}
         >
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
           <Icon name="message" size={22} />
           <span>Bình luận</span>
         </button>
@@ -405,25 +387,6 @@ export default function VideoSlide({
             <Icon name={muted || volume === 0 ? 'mute' : 'volume'} size={22} />
             <span>{muted || volume === 0 ? 'Bật tiếng' : 'Âm lượng'}</span>
           </button>
-<<<<<<< HEAD
-          <div className={`volume-slider ${showVolume ? 'visible' : ''}`} onMouseEnter={() => setShowVolume(true)} onMouseLeave={() => {
-            window.setTimeout(() => {
-              const wrapper = volumeRef.current
-              if (!wrapper) return
-              if (!wrapper.matches(':hover')) {
-                setShowVolume(false)
-              }
-            }, 120)
-          }}>
-            <input type="range" min="0" max="1" step="0.01" value={muted ? 0 : volume} onChange={changeVolume} />
-          </div>
-        </div>
-        <button type="button" className="rail-button" onClick={toggleFullscreen} aria-label={fullscreen ? 'Thu nhỏ' : 'Phóng to'}>
-          <Icon name="expand" size={22} />
-          <span>{fullscreen ? 'Thu nhỏ' : 'Phóng to'}</span>
-        </button>
-        <button type="button" className="rail-button" onClick={() => setReporting(true)} aria-label="Báo cáo">
-=======
           <div
             className={`volume-slider ${showVolume ? 'visible' : ''}`}
             onMouseEnter={() => setShowVolume(true)}
@@ -462,20 +425,11 @@ export default function VideoSlide({
           onClick={() => setReporting(true)}
           aria-label="Báo cáo"
         >
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
           <Icon name="flag" size={22} />
           <span>Báo cáo</span>
         </button>
       </div>
 
-<<<<<<< HEAD
-      {reporting && <ReportDialog video={video} onClose={() => setReporting(false)} onReported={onReported} />}
-      {showComments && <CommentDrawer video={video} onClose={() => setShowComments(false)} />}
-    </article>
-  )
-}
-
-=======
       {reporting && (
         <ReportDialog
           video={video}
@@ -489,4 +443,3 @@ export default function VideoSlide({
     </article>
   )
 }
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

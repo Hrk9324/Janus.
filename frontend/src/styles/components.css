@@ -333,8 +333,6 @@ textarea.text-input {
   font-size: 11.5px;
 }
 
-<<<<<<< HEAD
-=======
 .stat-button {
   cursor: pointer;
   text-align: left;
@@ -351,7 +349,6 @@ textarea.text-input {
   background: rgba(254, 44, 85, 0.08);
 }
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 .avatar {
   display: inline-grid;
   place-items: center;
@@ -451,8 +448,6 @@ textarea.text-input {
   background: var(--surface);
   text-align: left;
   color: var(--text);
-<<<<<<< HEAD
-=======
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -460,7 +455,6 @@ textarea.text-input {
 .video-list-item:hover {
   background: var(--surface-2);
   border-color: rgba(255, 255, 255, 0.12);
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 }
 
 .video-list-thumb {
@@ -470,18 +464,13 @@ textarea.text-input {
   background: radial-gradient(circle at top, rgba(254, 44, 85, 0.4), rgba(20, 20, 20, 0.9));
   display: grid;
   place-items: center;
-<<<<<<< HEAD
-=======
   flex-shrink: 0;
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 }
 
 .video-list-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
-<<<<<<< HEAD
-=======
   flex: 1;
   min-width: 0;
 }
@@ -490,7 +479,6 @@ textarea.text-input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 }
 
 .video-list-info span {
@@ -498,8 +486,6 @@ textarea.text-input {
   font-size: 12px;
 }
 
-<<<<<<< HEAD
-=======
 .video-list-status {
   margin-left: auto;
   display: flex;
@@ -516,7 +502,6 @@ textarea.text-input {
   gap: 8px;
 }
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 .report-options {

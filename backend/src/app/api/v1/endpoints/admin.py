@@ -1,18 +1,10 @@
 from uuid import UUID
 
-<<<<<<< HEAD
-from fastapi import APIRouter, Depends
-=======
 from fastapi import APIRouter, Depends, Query, status
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies import require_roles
-<<<<<<< HEAD
-from app.models import User, UserRole
-from app.schemas import AdminRoleUpdate, AdminUserDetail, AdminUserStatusUpdate, AdminUserSummary
-=======
 from app.models import User, UserRole, Video
 from app.schemas import (
     AdminAuditLogItem,
@@ -28,7 +20,6 @@ from app.schemas import (
     ModeratorStatsResponse,
     VideoResponse,
 )
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from app.services import admin_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -37,12 +28,6 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 @router.get("/users", response_model=list[AdminUserSummary])
 def admin_list_users(
     search: str | None = None,
-<<<<<<< HEAD
-    user: User = Depends(require_roles(UserRole.admin)),
-    db: Session = Depends(get_db),
-) -> list[User]:
-    return admin_service.list_users(db, search)
-=======
     role: UserRole | None = None,
     status: str | None = None,
     is_active: bool | None = None,
@@ -85,7 +70,6 @@ def admin_list_audit_logs(
         skip=skip,
         limit=limit,
     )
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 @router.get("/users/{user_id}", response_model=AdminUserDetail)
@@ -123,8 +107,6 @@ def admin_update_user_role(
     db: Session = Depends(get_db),
 ) -> User:
     return admin_service.update_user_role(db, user_id, user, payload.role)
-<<<<<<< HEAD
-=======
 
 
 @router.post(
@@ -189,4 +171,3 @@ def admin_get_moderator_stats(
     db: Session = Depends(get_db),
 ) -> dict:
     return admin_service.get_moderator_stats(db, moderator_id)
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

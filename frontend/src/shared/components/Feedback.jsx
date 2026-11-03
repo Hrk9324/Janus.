@@ -48,18 +48,11 @@ export function StatusBadge({ status, label }) {
   const tone =
     status === 'published'
       ? 'ok'
-<<<<<<< HEAD
-      : status === 'pending_review' || status === 'processing'
-=======
       : status === 'pending_review' || status === 'processing' || status === 'pending'
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         ? 'warn'
         : status === 'rejected' || status === 'failed'
           ? 'danger'
           : 'neutral'
-<<<<<<< HEAD
-  return <span className={`badge badge-${tone}`}>{label || status}</span>
-=======
 
   const displayLabel =
     label ||
@@ -76,7 +69,6 @@ export function StatusBadge({ status, label }) {
               : status)
 
   return <span className={`badge badge-${tone}`}>{displayLabel}</span>
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 }
 
 export function ErrorNote({ children }) {

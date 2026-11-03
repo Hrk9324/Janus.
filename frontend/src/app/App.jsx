@@ -10,6 +10,8 @@ import ProfilePage from '@/pages/ProfilePage'
 import RegisterPage from '@/pages/RegisterPage'
 import UploadPage from '@/pages/UploadPage'
 import EditVideoPage from '@/pages/EditVideoPage'
+import AdminPage from '@/pages/AdminPage'
+import BookmarksPage from '@/pages/BookmarksPage'
 
 export default function App() {
   return (
@@ -43,10 +45,26 @@ export default function App() {
               }
             />
             <Route
+              path="bookmarks"
+              element={
+                <RequireAuth>
+                  <BookmarksPage />
+                </RequireAuth>
+              }
+            />
+            <Route
               path="moderation"
               element={
                 <RequireRole roles={['moderator', 'admin']}>
                   <ModerationPage />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="admin"
+              element={
+                <RequireRole roles={['admin']}>
+                  <AdminPage />
                 </RequireRole>
               }
             />

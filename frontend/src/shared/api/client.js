@@ -1,17 +1,4 @@
 /**
-<<<<<<< HEAD
- * API client dùng chung.
- *
- * - Đọc base URL từ VITE_API_BASE_URL (mặc định "/api" = Vite proxy sang backend).
- * - Tự gắn Bearer token nếu người dùng đã đăng nhập.
- * - Ném ApiError có status + detail để UI hiển thị đúng thông báo từ backend.
- */
-
-const RAW_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
-const BASE_URL = RAW_BASE.endsWith('/') ? RAW_BASE.slice(0, -1) : RAW_BASE
-
-const TOKEN_KEY = 'janus.access_token'
-=======
  * API client dùng chung cho toàn bộ frontend.
  *
  * - Đọc base URL từ VITE_API_BASE_URL (mặc định "/api" = Vite proxy sang FastAPI backend).
@@ -27,7 +14,6 @@ const BASE_URL = RAW_BASE.endsWith('/') ? RAW_BASE.slice(0, -1) : RAW_BASE
 
 const ACCESS_TOKEN_KEY = 'janus.access_token'
 const REFRESH_TOKEN_KEY = 'janus.refresh_token'
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 export class ApiError extends Error {
   constructor(status, detail) {
@@ -39,14 +25,6 @@ export class ApiError extends Error {
 }
 
 export function getToken() {
-<<<<<<< HEAD
-  return localStorage.getItem(TOKEN_KEY)
-}
-
-export function setToken(token) {
-  if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
-=======
   return localStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
@@ -93,7 +71,6 @@ export function setTokens({ access_token, refresh_token } = {}) {
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 }
 
 /** URL tuyệt đối cho các thẻ không qua fetch (vd: <video src={videoUrl(...)} />). */
@@ -101,15 +78,6 @@ export function apiUrl(path) {
   return `${BASE_URL}${path}`
 }
 
-<<<<<<< HEAD
-/**
- * Gọi API backend.
- * @param {string} path    path tương đối, ví dụ "/v1/auth/login"
- * @param {object} options { method, body, auth, headers, signal }
- */
-export async function apiFetch(path, options = {}) {
-  const { method = 'GET', body, auth = true, headers = {}, signal } = options
-=======
 function handleSessionExpired() {
   clearTokens()
   if (typeof window !== 'undefined') {
@@ -189,7 +157,6 @@ export async function rotateTokens() {
  */
 export async function apiFetch(path, options = {}) {
   const { method = 'GET', body, auth = true, headers = {}, signal, _retry = false } = options
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   const token = getToken()
 
   const requestHeaders = { ...headers }
@@ -209,19 +176,6 @@ export async function apiFetch(path, options = {}) {
     throw new ApiError(0, 'Không kết nối được tới máy chủ. Hãy kiểm tra backend đang chạy.')
   }
 
-<<<<<<< HEAD
-  if (response.status === 204) return null
-
-  if (response.status === 401 && auth) {
-    try {
-      const payload = await response.clone().json().catch(() => null)
-      if (payload?.detail === 'User not found') {
-        localStorage.removeItem(TOKEN_KEY)
-      }
-    } catch {}
-  }
-
-=======
   // Response Interceptor: Tự động refresh token nếu nhận 401 Unauthorized
   const isAuthEndpoint =
     path.includes('/auth/login') ||
@@ -255,7 +209,6 @@ export async function apiFetch(path, options = {}) {
 
   if (response.status === 204) return null
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   const payload = await response.json().catch(() => null)
   if (!response.ok) {
     const detail = typeof payload?.detail === 'string' ? payload.detail : null

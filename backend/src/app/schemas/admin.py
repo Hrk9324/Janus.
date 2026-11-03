@@ -1,11 +1,6 @@
 from datetime import datetime
 from uuid import UUID
 
-<<<<<<< HEAD
-from pydantic import BaseModel, ConfigDict, EmailStr
-
-from app.models.enums import UserRole
-=======
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -16,7 +11,6 @@ from pydantic import (
 )
 
 from app.models.enums import UserRole, VideoStatus
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 class AdminUserSummary(BaseModel):
@@ -24,10 +18,7 @@ class AdminUserSummary(BaseModel):
 
     id: UUID
     display_name: str
-<<<<<<< HEAD
-=======
     email: EmailStr | None = None
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     role: UserRole
     is_active: bool
     created_at: datetime
@@ -35,12 +26,6 @@ class AdminUserSummary(BaseModel):
 
 class AdminUserDetail(AdminUserSummary):
     email: EmailStr
-<<<<<<< HEAD
-
-
-class AdminUserStatusUpdate(BaseModel):
-    is_active: bool
-=======
     discriminator: str | None = None
     bio: str | None = None
     avatar_url: str | None = None
@@ -63,13 +48,10 @@ class AdminUserStatusUpdate(BaseModel):
             else:
                 raise ValueError("Trạng thái status không hợp lệ (chấp nhận 'active' hoặc 'banned')")
         return self
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 class AdminRoleUpdate(BaseModel):
     role: UserRole
-<<<<<<< HEAD
-=======
 
 
 class LabelAdminCreate(BaseModel):
@@ -162,4 +144,3 @@ class ModeratorStatsResponse(BaseModel):
     role: str
     videos_reviewed: int
     appeals_handled: int
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

@@ -1,17 +1,3 @@
-<<<<<<< HEAD
-"""Nghiệp vụ quản trị người dùng."""
-
-from uuid import UUID
-
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from app.exceptions import ForbiddenError, NotFoundError
-from app.models import User, UserRole
-
-
-def list_users(db: Session, search: str | None = None) -> list[User]:
-=======
 """Nghiệp vụ quản trị người dùng, nhãn nội dung, video và thống kê."""
 
 from datetime import UTC, datetime, timedelta
@@ -52,19 +38,15 @@ def list_users(
     skip: int = 0,
     limit: int = 50,
 ) -> list[User]:
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     query = select(User).order_by(User.created_at.desc())
     if search:
         pattern = f"%{search.strip()}%"
         query = query.where(User.display_name.ilike(pattern) | User.email.ilike(pattern))
-<<<<<<< HEAD
-=======
     if role is not None:
         query = query.where(User.role == role)
     if is_active is not None:
         query = query.where(User.is_active == is_active)
     query = query.offset(skip).limit(limit)
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     return list(db.scalars(query))
 
 
@@ -103,8 +85,6 @@ def update_user_role(db: Session, user_id: UUID, actor: User, role: UserRole) ->
     db.commit()
     db.refresh(target)
     return target
-<<<<<<< HEAD
-=======
 
 
 def create_label(db: Session, name: str) -> dict:
@@ -401,4 +381,3 @@ def get_moderator_stats(db: Session, moderator_id: UUID) -> dict:
         "videos_reviewed": reviews_count,
         "appeals_handled": appeals_count,
     }
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

@@ -1,11 +1,4 @@
 import { useFeed } from '../hooks/useFeed'
-<<<<<<< HEAD
-import { apiUrl } from '@/shared/api/client'
-import Icon from '@/shared/components/Icon'
-
-export default function FeedGrid() {
-  const { videos, loading, error, refresh } = useFeed()
-=======
 import { useTagSearch } from '../hooks/useTagSearch'
 import Icon from '@/shared/components/Icon'
 
@@ -24,7 +17,6 @@ export default function FeedGrid({ activeTag = '' }) {
         loadMore: tagSearch.loadMore,
       }
     : defaultFeed
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
   if (loading) {
     return <div className="feed-grid-empty">Đang tải...</div>
@@ -44,26 +36,6 @@ export default function FeedGrid({ activeTag = '' }) {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="feed-grid">
-      {videos.map((video) => {
-        const src = video.stream_url ? apiUrl(video.stream_url) : video.thumbnail_url
-        return (
-          <article key={video.id} className="feed-grid-card">
-            <div className="feed-grid-thumb">
-              {src ? <video src={src} muted preload="metadata" /> : <div className="feed-grid-placeholder" />}
-              <div className="feed-grid-play">
-                <Icon name="play" size={14} />
-              </div>
-            </div>
-            <div className="feed-grid-meta">
-              <p className="feed-grid-title">{video.caption || video.original_filename || 'Video không tiêu đề'}</p>
-              <span className="feed-grid-user">@{video.owner_name || video.username || 'janus'}</span>
-            </div>
-          </article>
-        )
-      })}
-=======
     <div className="feed-grid-wrapper">
       <div className="feed-grid">
         {videos.map((video) => {
@@ -102,7 +74,6 @@ export default function FeedGrid({ activeTag = '' }) {
           </button>
         </div>
       )}
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     </div>
   )
 }

@@ -7,11 +7,6 @@ import { useAuth } from '@/features/auth/AuthContext'
 import AiResultPanel from '@/features/videos/components/AiResultPanel'
 import { deleteVideo, fetchMyVideos, streamUrl } from '@/features/videos/api/videosApi'
 
-<<<<<<< HEAD
-export default function ProfilePage() {
-  const { user } = useAuth()
-  const [videos, setVideos] = useState([])
-=======
 const STATUS_TABS = [
   { id: 'all', label: 'Tất cả' },
   { id: 'published', label: 'Đã phát' },
@@ -23,7 +18,6 @@ export default function ProfilePage() {
   const { user } = useAuth()
   const [videos, setVideos] = useState([])
   const [activeTab, setActiveTab] = useState('all')
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState(null)
@@ -58,8 +52,6 @@ export default function ProfilePage() {
     }
   }
 
-<<<<<<< HEAD
-=======
   // Số lượng đếm cho từng tab
   const counts = {
     all: videos.length,
@@ -89,7 +81,6 @@ export default function ProfilePage() {
     }
   }
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
   if (loading) {
     return (
       <div className="page-center">
@@ -109,20 +100,6 @@ export default function ProfilePage() {
           </p>
         </div>
         <div className="stat-row">
-<<<<<<< HEAD
-          <div className="stat">
-            <strong>{videos.length}</strong>
-            <span>Video</span>
-          </div>
-          <div className="stat">
-            <strong>{videos.filter((item) => item.status === 'published').length}</strong>
-            <span>Đã phát</span>
-          </div>
-          <div className="stat">
-            <strong>{videos.filter((item) => item.status === 'pending_review').length}</strong>
-            <span>Chờ duyệt</span>
-          </div>
-=======
           <button
             type="button"
             className={`stat stat-button ${activeTab === 'all' ? 'active' : ''}`}
@@ -155,7 +132,6 @@ export default function ProfilePage() {
             <strong>{counts.rejected}</strong>
             <span>Bị từ chối</span>
           </button>
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         </div>
       </div>
 
@@ -173,40 +149,6 @@ export default function ProfilePage() {
           }
         />
       ) : (
-<<<<<<< HEAD
-        <div className="profile-grid">
-          <ul className="video-list">
-            {videos.map((video) => (
-              <li key={video.id} className={video.id === selectedId ? 'video-row active' : 'video-row'}>
-                <button type="button" className="video-row-main" onClick={() => setSelectedId(video.id)}>
-                  <span className="video-row-thumb">
-                    <video src={streamUrl(video.id)} muted playsInline preload="metadata" />
-                  </span>
-                  <span className="video-row-copy">
-                    <strong>{video.caption || video.original_filename}</strong>
-                    <span>
-                      {formatDateTime(video.created_at)} · {formatBytes(video.size_bytes)}
-                    </span>
-                  </span>
-                  <StatusBadge status={video.status} label={VIDEO_STATUS_LABEL[video.status] || video.status} />
-                </button>
-                <button
-                  type="button"
-                  className="icon-button danger"
-                  onClick={() => remove(video)}
-                  disabled={busyId === video.id}
-                  aria-label="Xóa video"
-                  title="Xóa video"
-                >
-                  <Icon name="trash" size={16} />
-                </button>
-              </li>
-            ))}
-          </ul>
-
-          {selectedId && <AiResultPanel videoId={selectedId} />}
-        </div>
-=======
         <>
           {/* Thanh Tabs lọc trạng thái */}
           <div className="card-tabs" style={{ marginBottom: '16px' }}>
@@ -263,7 +205,6 @@ export default function ProfilePage() {
             {selectedId && <AiResultPanel videoId={selectedId} />}
           </div>
         </>
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
       )}
     </div>
   )

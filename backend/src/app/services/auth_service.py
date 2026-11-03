@@ -1,14 +1,3 @@
-<<<<<<< HEAD
-"""Nghiệp vụ tài khoản: đăng ký và xác thực."""
-
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
-
-from app.core.security import hash_password, verify_password
-from app.exceptions import ConflictError, UnauthorizedError
-from app.models import User
-=======
 """Nghiệp vụ tài khoản: đăng ký, xác thực, phiên đăng nhập và khôi phục mật khẩu."""
 
 from datetime import UTC, datetime, timedelta
@@ -29,13 +18,10 @@ from app.core.security import (
 )
 from app.exceptions import ConflictError, InvalidInputError, UnauthorizedError
 from app.models import PasswordResetToken, RefreshToken, RevokedToken, User
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from app.schemas import LoginRequest, UserCreate
 from app.services.profile_service import allocate_discriminator
 
 
-<<<<<<< HEAD
-=======
 def _is_expired(dt: datetime) -> bool:
     """Kiểm tra thời điểm đã quá hạn hay chưa, hỗ trợ cả offset-naive (SQLite) và aware (Postgres)."""
     if dt.tzinfo is None:
@@ -43,7 +29,6 @@ def _is_expired(dt: datetime) -> bool:
     return dt <= datetime.now(UTC)
 
 
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 def create_user(db: Session, payload: UserCreate) -> User:
     """Tạo người dùng mới; email đã tồn tại là xung đột nghiệp vụ (409)."""
     email = payload.email.lower()
@@ -75,8 +60,6 @@ def authenticate(db: Session, payload: LoginRequest) -> User:
     if user is None or not verify_password(payload.password, user.password_hash):
         raise UnauthorizedError("Email hoặc mật khẩu không chính xác")
     return user
-<<<<<<< HEAD
-=======
 
 
 def create_session(db: Session, user: User) -> tuple[str, str]:
@@ -203,4 +186,3 @@ def reset_password(db: Session, raw_token: str, new_password: str) -> None:
         .values(revoked_at=now)
     )
     db.commit()
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
