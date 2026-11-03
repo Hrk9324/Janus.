@@ -1,18 +1,33 @@
 from datetime import datetime
+<<<<<<< HEAD
+=======
+from typing import TYPE_CHECKING
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
     DateTime,
+<<<<<<< HEAD
     Enum as SqlEnum,
     Float,
     ForeignKey,
     Index,
+=======
+    Float,
+    ForeignKey,
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     Integer,
     String,
     Text,
     UniqueConstraint,
+<<<<<<< HEAD
     text,
+=======
+)
+from sqlalchemy import (
+    Enum as SqlEnum,
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,6 +35,12 @@ from app.models.base import Base, utcnow
 from app.models.enums import JobStatus, LabelSource, VideoStatus, VideoVisibility
 from app.models.user import User
 
+<<<<<<< HEAD
+=======
+if TYPE_CHECKING:
+    from app.models.moderation import Appeal, ModerationReview, Report
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 class Video(Base):
     __tablename__ = "videos"
@@ -43,6 +64,12 @@ class Video(Base):
     is_deleted: Mapped[bool] = mapped_column(
         Boolean, default=False, index=True, nullable=False
     )
+<<<<<<< HEAD
+=======
+    view_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False, server_default="0"
+    )
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )
@@ -58,6 +85,12 @@ class Video(Base):
     moderation_reviews: Mapped[list["ModerationReview"]] = relationship(
         back_populates="video"
     )
+<<<<<<< HEAD
+=======
+    appeals: Mapped[list["Appeal"]] = relationship(
+        back_populates="video", cascade="all, delete-orphan"
+    )
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
     @property
     def owner_name(self) -> str:

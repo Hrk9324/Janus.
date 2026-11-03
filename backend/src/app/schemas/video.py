@@ -18,6 +18,10 @@ class VideoResponse(BaseModel):
     status: VideoStatus
     created_at: datetime
     owner_name: str | None = None
+<<<<<<< HEAD
+=======
+    view_count: int = 0
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 class FeedItem(BaseModel):
@@ -27,6 +31,16 @@ class FeedItem(BaseModel):
     thumbnail_url: str | None
     allow_comments: bool
     created_at: datetime
+<<<<<<< HEAD
+=======
+    view_count: int = 0
+
+
+class VideoViewResponse(BaseModel):
+    video_id: UUID
+    view_count: int
+    counted: bool
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 class FeedResponse(BaseModel):
@@ -111,3 +125,7 @@ class AIResultResponse(BaseModel):
     job_status: str
     transcript: str | None
     labels: list[LabelResponse]
+<<<<<<< HEAD
+=======
+    video_status: VideoStatus | None = None
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

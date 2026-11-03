@@ -21,8 +21,15 @@ from app.models import (
 from app.schemas import (
     ConfirmLabelsRequest,
     LabelResponse,
+<<<<<<< HEAD
     VideoLabelsResponse,
 )
+=======
+    ReplaceVideoLabelsRequest,
+    VideoLabelsResponse,
+)
+from app.services.ai_service import confidence_level
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 def _get_video(db: Session, video_id: UUID) -> Video:
@@ -138,3 +145,41 @@ def confirm_video_labels(
         labels=_label_response(video),
         moderation_required=moderation_required,
     )
+<<<<<<< HEAD
+=======
+
+
+def replace_video_labels(
+    db: Session,
+    video_id: UUID,
+    actor: User,
+    payload: ReplaceVideoLabelsRequest,
+) -> list[LabelResponse]:
+    if actor.role not in {UserRole.moderator, UserRole.admin}:
+        raise ForbiddenError("Chỉ kiểm duyệt viên hoặc quản trị viên mới có quyền thay thế nhãn")
+    video = _get_video(db, video_id)
+    # Xóa toàn bộ nhãn hiện tại
+    db.execute(delete(VideoLabel).where(VideoLabel.video_id == video.id))
+    db.flush()
+
+    for item in payload.labels:
+        label = db.scalar(select(Label).where(Label.name.ilike(item.name)))
+        if label is None:
+            label = Label(name=item.name)
+            db.add(label)
+            db.flush()
+        db.add(
+            VideoLabel(
+                video_id=video.id,
+                label_id=label.id,
+                confidence=item.confidence,
+                level=confidence_level(item.confidence),
+                source=LabelSource.user,
+            )
+        )
+
+    db.commit()
+    db.refresh(video)
+    video = _get_video(db, video_id)
+    return _label_response(video)
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

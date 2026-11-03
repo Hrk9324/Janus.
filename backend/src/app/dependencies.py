@@ -8,14 +8,23 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import get_db
+<<<<<<< HEAD
 from app.models import User, UserRole
+=======
+from app.models import RevokedToken, User, UserRole
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 bearer = HTTPBearer(auto_error=False)
 
 
+<<<<<<< HEAD
 def _decode_user_id(token: str) -> UUID:
     payload = jwt.decode(token, get_settings().secret_key, algorithms=["HS256"])
     return UUID(payload["sub"])
+=======
+def _decode_token_payload(token: str) -> dict:
+    return jwt.decode(token, get_settings().secret_key, algorithms=["HS256"])
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
 def current_user(
@@ -28,11 +37,27 @@ def current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Vui lòng đăng nhập"
         )
     try:
+<<<<<<< HEAD
         user_id = _decode_user_id(credentials.credentials)
+=======
+        payload = _decode_token_payload(credentials.credentials)
+        user_id = UUID(payload["sub"])
+        jti = payload.get("jti")
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     except (jwt.PyJWTError, KeyError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token không hợp lệ"
         ) from exc
+<<<<<<< HEAD
+=======
+
+    if jti and db.get(RevokedToken, jti) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.",
+        )
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     user = db.get(User, user_id)
     if user is None or not user.is_active:
         raise HTTPException(
@@ -49,9 +74,21 @@ def optional_user(
     if credentials is None:
         return None
     try:
+<<<<<<< HEAD
         user_id = _decode_user_id(credentials.credentials)
     except (jwt.PyJWTError, KeyError, ValueError):
         return None
+=======
+        payload = _decode_token_payload(credentials.credentials)
+        user_id = UUID(payload["sub"])
+        jti = payload.get("jti")
+    except (jwt.PyJWTError, KeyError, ValueError):
+        return None
+
+    if jti and db.get(RevokedToken, jti) is not None:
+        return None
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     user = db.get(User, user_id)
     return user if user is not None and user.is_active else None
 

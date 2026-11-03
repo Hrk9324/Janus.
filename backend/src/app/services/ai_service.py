@@ -17,6 +17,11 @@ from app.models import (
     JobStatus,
     Label,
     LabelSource,
+<<<<<<< HEAD
+=======
+    ModerationAction,
+    ModerationReview,
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     User,
     Video,
     VideoLabel,
@@ -28,6 +33,25 @@ from app.services.thumbnail_service import extract_first_frame
 logger = logging.getLogger(__name__)
 
 SUPPORTED_MP4_CODECS = (b"avc1", b"hvc1", b"hev1", b"av01", b"mp4v")
+<<<<<<< HEAD
+=======
+SUPPORTED_MP4_BRANDS = (
+    b"isom",
+    b"iso2",
+    b"iso4",
+    b"iso5",
+    b"iso6",
+    b"mp41",
+    b"mp42",
+    b"mmp4",
+    b"M4V ",
+    b"M4A ",
+    b"dash",
+    b"avc1",
+    b"MSNV",
+    b"qt  ",
+)
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 MOCK_TRANSCRIPT = "Mock transcript for development testing."
 
 
@@ -38,11 +62,20 @@ def validate_mp4_content(content: bytes) -> str:
     if box_size < 16 or box_size > len(content):
         raise ValueError("MP4 ftyp box không hợp lệ")
     compatible_brands = content[8:box_size]
+<<<<<<< HEAD
     if not any(
         brand in compatible_brands
         for brand in (b"isom", b"iso2", b"mp41", b"mp42", b"avc1")
     ):
         raise ValueError("MP4 brand không được hỗ trợ")
+=======
+    has_known_brand = any(brand in compatible_brands for brand in SUPPORTED_MP4_BRANDS)
+    if not has_known_brand:
+        # Nếu không nằm trong danh sách tường minh, kiểm tra major_brand có phải 4 ký tự ASCII hợp lệ của container MP4 chuẩn
+        major_brand = content[8:12]
+        if not (len(major_brand) == 4 and all(32 <= b <= 126 for b in major_brand)):
+            raise ValueError("MP4 brand không được hỗ trợ")
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     codec = next((marker for marker in SUPPORTED_MP4_CODECS if marker in content), None)
     if codec is None:
         raise ValueError("Không tìm thấy codec video MP4 được hỗ trợ")
@@ -95,17 +128,43 @@ def _apply_mock_result(db: Session, job: AIJob, video: Video, note: str | None =
 def _apply_analysis_report(db: Session, job: AIJob, video: Video, report: AnalysisReport) -> None:
     """Lưu kết quả từ pipeline NSFW-Detection vào job, nhãn và trạng thái video."""
     job.transcript = report.transcript
+<<<<<<< HEAD
     for detection in report.detections:
+=======
+    has_high_risk = False
+    has_medium_risk = False
+
+    for detection in report.detections:
+        level = confidence_level(detection.confidence)
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         db.add(
             VideoLabel(
                 video_id=video.id,
                 label_id=_upsert_label(db, detection.label).id,
                 confidence=detection.confidence,
+<<<<<<< HEAD
                 level=confidence_level(detection.confidence),
                 source=LabelSource.ai,
             )
         )
     if report.is_safe:
+=======
+                level=level,
+                source=LabelSource.ai,
+            )
+        )
+        if (
+            detection.label.strip().lower() == "adult"
+            or level == "HIGH"
+            or detection.confidence >= 0.85
+        ):
+            has_high_risk = True
+        elif level == "MEDIUM" or (0.4 <= detection.confidence < 0.85):
+            has_medium_risk = True
+
+    if report.is_safe and not has_high_risk and not has_medium_risk:
+        # Trường hợp 3 - NỘI DUNG AN TOÀN (Safe / Low Risk) -> Phát hành ngay
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         db.add(
             VideoLabel(
                 video_id=video.id,
@@ -116,9 +175,41 @@ def _apply_analysis_report(db: Session, job: AIJob, video: Video, report: Analys
             )
         )
         video.status = VideoStatus.published
+<<<<<<< HEAD
     else:
         # SRS 2.2.9: video có nhãn rủi ro chuyển vào hàng đợi kiểm duyệt.
         video.status = VideoStatus.pending_review
+=======
+    elif has_high_risk:
+        # Trường hợp 1 - VI PHẠM RÕ RÀNG (Adult / High Risk / confidence >= 0.85) -> Tự động từ chối
+        video.status = VideoStatus.rejected
+        auto_reject_note = "Tự động từ chối bởi hệ thống AI: Phát hiện nội dung vi phạm tiêu chuẩn (Adult)."
+        db.add(
+            ModerationReview(
+                video_id=video.id,
+                moderator_id=None,
+                action=ModerationAction.reject,
+                reason=auto_reject_note,
+            )
+        )
+        if not job.error_message:
+            job.error_message = auto_reject_note
+    else:
+        # Trường hợp 2 - RANH GIỚI NGHI VẤN (Borderline / Medium Risk) -> Chờ Moderator duyệt
+        video.status = VideoStatus.pending_review
+        pending_note = "Cần kiểm duyệt thủ công: Đang chờ Moderator xem xét."
+        db.add(
+            ModerationReview(
+                video_id=video.id,
+                moderator_id=None,
+                action=None,
+                reason=pending_note,
+            )
+        )
+        if not job.error_message:
+            job.error_message = pending_note
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     job.status = JobStatus.succeeded
     job.completed_at = datetime.now(timezone.utc)
     db.commit()

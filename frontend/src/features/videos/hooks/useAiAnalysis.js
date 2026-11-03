@@ -3,7 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 import { fetchAiResult } from '../api/videosApi'
 
 const TERMINAL_STATUSES = ['succeeded', 'failed']
+<<<<<<< HEAD
 const POLL_INTERVAL_MS = 1500
+=======
+const POLL_INTERVAL_MS = 2000
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 const MAX_ATTEMPTS = 40
 
 /**

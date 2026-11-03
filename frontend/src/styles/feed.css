@@ -203,6 +203,7 @@
   accent-color: var(--accent);
 }
 
+<<<<<<< HEAD
 .feed-progress {
   position: absolute;
   right: 10px;
@@ -225,6 +226,8 @@
   background: #fff;
 }
 
+=======
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 @media (max-width: 1100px) {
   .slide-stage video {
     width: min(380px, 48vw);
@@ -279,6 +282,7 @@
   flex: 1;
 }
 
+<<<<<<< HEAD
 .feed-progress {
   position: absolute;
   right: 10px;
@@ -301,6 +305,8 @@
   background: #fff;
 }
 
+=======
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 .rail-volume {
   position: relative;
   display: flex;

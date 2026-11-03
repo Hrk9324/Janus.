@@ -5,7 +5,11 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.db.session import SessionLocal
+<<<<<<< HEAD
 from app.models import Label, UserRole, Video, VideoLabel, VideoStatus
+=======
+from app.models import Label, UserRole, VideoLabel, VideoStatus
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from app.services.ai_service import confidence_level
 
 
@@ -67,18 +71,26 @@ def test_stream_visibility_rules(client, register, login, seed_video):
     )
     missing = seed_video(write_file=False)
     assert client.get(f"/api/v1/videos/{missing.video_id}/stream", headers=login(missing.email)).status_code == 404
+<<<<<<< HEAD
     assert client.get(url).status_code == 401
 
 
 def test_search_filters_by_label_exclude_label_and_caption(
     client, register, login, seed_video
 ):
+=======
+    assert client.get(url).status_code == 404
+
+
+def test_search_by_tag_returns_public_paginated_items(client, seed_video):
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     adult = seed_video(caption="clip có yếu tố người lớn")
     attach_label(str(adult.video_id), "Adult")
     normal = seed_video(caption="clip bình thường")
     attach_label(str(normal.video_id), "Safe")
     pending = seed_video(caption="chờ kiểm duyệt", status=VideoStatus.pending_review)
 
+<<<<<<< HEAD
     headers = register("searcher@example.com")
     base = "/api/v1/videos"
 
@@ -110,3 +122,16 @@ def test_search_filters_by_label_exclude_label_and_caption(
     assert item["owner_display_name"] == "Owner"
 
     assert client.get(f"{base}/search").status_code == 401
+=======
+    response = client.get("/api/v1/videos/search?tag=Adult&limit=1")
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"items", "has_more", "next_cursor"}
+    assert len(body["items"]) == 1
+    assert body["items"][0]["id"] == str(adult.video_id)
+    assert body["items"][0]["matched_labels"] == ["Adult"]
+    assert str(pending.video_id) not in {
+        item["id"] for item in body["items"]
+    }
+    assert client.get("/api/v1/videos/search?tag=Adult&limit=0").status_code == 422
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

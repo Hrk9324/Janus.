@@ -1,7 +1,11 @@
 from datetime import datetime
 from uuid import UUID
 
+<<<<<<< HEAD
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, UploadFile, status
+=======
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Request, UploadFile, status
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -11,15 +15,28 @@ from app.dependencies import current_user, optional_user
 from app.models import User, Video
 from app.schemas import (
     AIResultResponse,
+<<<<<<< HEAD
     ConfirmLabelsRequest,
     FeedResponse,
     LabelResponse,
+=======
+    AppealCreate,
+    AppealResponse,
+    ConfirmLabelsRequest,
+    FeedResponse,
+    LabelResponse,
+    ReplaceVideoLabelsRequest,
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     ReportCreate,
     ReportResponse,
     SearchTagResponse,
     VideoLabelsResponse,
     VideoResponse,
     VideoUpdate,
+<<<<<<< HEAD
+=======
+    VideoViewResponse,
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 )
 from app.services import (
     ai_service,
@@ -27,6 +44,10 @@ from app.services import (
     search_service,
     video_label_service,
     video_service,
+<<<<<<< HEAD
+=======
+    view_tracking_service,
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 )
 
 router = APIRouter(tags=["videos"])
@@ -74,7 +95,11 @@ def feed(
 @router.get("/videos/search", response_model=SearchTagResponse)
 def search_videos(
     tag: str = Query(..., min_length=1),
+<<<<<<< HEAD
     limit: int = Query(default=12, ge=1, le=20),  # noqa: B008
+=======
+    limit: int = Query(default=12, ge=1, le=20),
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     cursor: datetime | None = Query(default=None),  # noqa: B008
     db: Session = Depends(get_db),
 ) -> SearchTagResponse:
@@ -107,6 +132,19 @@ def labels(
     return video_label_service.list_video_labels(db, video_id, user)
 
 
+<<<<<<< HEAD
+=======
+@router.patch("/videos/{video_id}/labels", response_model=list[LabelResponse])
+def replace_labels(
+    video_id: UUID,
+    payload: ReplaceVideoLabelsRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> list[LabelResponse]:
+    return video_label_service.replace_video_labels(db, video_id, user, payload)
+
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 @router.post(
     "/videos/{video_id}/labels/confirm",
     response_model=VideoLabelsResponse,
@@ -120,6 +158,23 @@ def confirm_labels(
     return video_label_service.confirm_video_labels(db, video_id, user, payload)
 
 
+<<<<<<< HEAD
+=======
+@router.post(
+    "/videos/{video_id}/appeals",
+    response_model=AppealResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_appeal(
+    video_id: UUID,
+    payload: AppealCreate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> AppealResponse:
+    return moderation_service.create_appeal(db, video_id, user, payload.reason)
+
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 @router.get("/videos/{video_id}/stream", response_model=None)
 def stream_video(
     video_id: UUID,
@@ -150,3 +205,41 @@ def create_report(
     db: Session = Depends(get_db),
 ) -> ReportResponse:
     return moderation_service.create_report(db, video_id, user, payload.reason)
+<<<<<<< HEAD
+=======
+
+
+@router.post(
+    "/videos/{video_id}/views",
+    response_model=VideoViewResponse,
+    status_code=status.HTTP_200_OK,
+)
+def record_video_view(
+    video_id: UUID,
+    request: Request,
+    user: User | None = Depends(optional_user),
+    db: Session = Depends(get_db),
+) -> VideoViewResponse:
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    real_ip = request.headers.get("X-Real-IP")
+    forwarded = request.headers.get("X-Forwarded-For")
+    if cf_ip:
+        client_ip = cf_ip.strip()
+    elif real_ip:
+        client_ip = real_ip.strip()
+    elif forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    elif request.client and request.client.host:
+        client_ip = request.client.host
+    else:
+        client_ip = "127.0.0.1"
+
+    user_id = user.id if user is not None else None
+    result = view_tracking_service.record_video_view(
+        db,
+        video_id=video_id,
+        user_id=user_id,
+        client_ip=client_ip,
+    )
+    return VideoViewResponse(**result)
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd

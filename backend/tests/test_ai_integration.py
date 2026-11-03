@@ -1,8 +1,15 @@
 """Test tích hợp NSFW-Detection và pipeline AI của backend."""
 
+<<<<<<< HEAD
 import pytest
 
 from app.services import ai_service as services
+=======
+import cv2
+import numpy as np
+import pytest
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 from app.ai import nsfw
 from app.ai.base import (
     SAFE_LABEL,
@@ -11,6 +18,7 @@ from app.ai.base import (
     DetectorNotImplementedError,
     DetectorUnavailableError,
 )
+<<<<<<< HEAD
 from app.ai.placeholders import DETECTORS
 from app.ai.pipeline import analyse_video
 from app.core.config import get_settings
@@ -21,6 +29,19 @@ from app.core.security import hash_password
 
 def test_placeholder_detectors_raise_and_model_dirs_exist():
     for name, detector in DETECTORS.items():
+=======
+from app.ai.pipeline import analyse_video
+from app.ai.placeholders import DETECTORS
+from app.core.config import get_settings
+from app.core.security import hash_password
+from app.db.session import SessionLocal
+from app.models import AIJob, JobStatus, ModerationAction, User, Video, VideoStatus
+from app.services import ai_service as services
+
+
+def test_placeholder_detectors_raise_and_model_dirs_exist():
+    for detector in DETECTORS.values():
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         with pytest.raises(DetectorNotImplementedError):
             detector("clip.mp4")
         # Placeholder detectors do not require model directories until their
@@ -61,6 +82,17 @@ def test_pipeline_records_unimplemented_detectors(monkeypatch, tmp_path):
 
 
 def _seed_job(tmp_path) -> tuple:
+<<<<<<< HEAD
+=======
+    video_path = tmp_path / "clip.mp4"
+    writer = cv2.VideoWriter(
+        str(video_path), cv2.VideoWriter_fourcc(*"mp4v"), 1, (16, 16)
+    )
+    writer.write(np.zeros((16, 16, 3), dtype=np.uint8))
+    writer.release()
+    assert video_path.is_file()
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     with SessionLocal() as db:
         user = User(
             email="job-owner@example.com",
@@ -72,9 +104,15 @@ def _seed_job(tmp_path) -> tuple:
         video = Video(
             owner_id=user.id,
             original_filename="clip.mp4",
+<<<<<<< HEAD
             storage_path=str(tmp_path / "clip.mp4"),
             mime_type="video/mp4",
             size_bytes=10,
+=======
+            storage_path=str(video_path),
+            mime_type="video/mp4",
+            size_bytes=video_path.stat().st_size,
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         )
         db.add(video)
         db.flush()
@@ -135,13 +173,40 @@ def test_analysis_persists_adult_detection_into_moderation_queue(monkeypatch, tm
         job = db.get(AIJob, job_id)
         video = db.get(Video, video_id)
         assert job.status is JobStatus.succeeded
+<<<<<<< HEAD
         assert video.status is VideoStatus.pending_review
+=======
+        assert video.status is VideoStatus.rejected
+        assert any("Tự động từ chối bởi hệ thống AI" in (r.reason or "") for r in video.moderation_reviews)
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         labels = {video_label.label.name: video_label for video_label in video.labels}
         assert set(labels) == {"Adult"}
         assert labels["Adult"].confidence == pytest.approx(0.87)
         assert labels["Adult"].level == "HIGH"
 
 
+<<<<<<< HEAD
+=======
+def test_analysis_sets_borderline_medium_risk_to_pending_review(monkeypatch, tmp_path):
+    video_id, job_id = _seed_job(tmp_path)
+    report = AnalysisReport(
+        detections=[Detection(label="Suggestive", confidence=0.55, detector="nsfw")],
+        normal_confidence=0.45,
+        transcript="[NSFW-Detection] borderline",
+        source="nsfw-detection",
+    )
+    monkeypatch.setattr(services, "analyse_video", lambda path: report)
+
+    services.run_video_analysis(video_id)
+
+    with SessionLocal() as db:
+        job = db.get(AIJob, job_id)
+        video = db.get(Video, video_id)
+        assert job.status is JobStatus.succeeded
+        assert video.status is VideoStatus.pending_review
+
+
+>>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 def test_analysis_publishes_safe_video(monkeypatch, tmp_path):
     video_id, job_id = _seed_job(tmp_path)
     report = AnalysisReport(
