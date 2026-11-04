@@ -283,7 +283,7 @@ export default function VideoSlide({
             loop
             playsInline
             muted={muted}
-            preload={isActive ? 'auto' : 'metadata'}
+            preload={isActive ? 'auto' : 'none'}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onTimeUpdate={handleTimeUpdate}

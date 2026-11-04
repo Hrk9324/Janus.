@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
 import { StatusBadge } from '@/shared/components/Feedback'
@@ -15,6 +15,7 @@ const STATUS_TABS = [
 
 export default function EditVideoPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [step, setStep] = useState('list')
   const [activeTab, setActiveTab] = useState('all')
   const [videos, setVideos] = useState([])
@@ -28,10 +29,15 @@ export default function EditVideoPage() {
 
   useEffect(() => {
     fetchMyVideos()
-      .then(setVideos)
+      .then((items) => {
+        setVideos(items)
+        const requestedId = searchParams.get('video_id')
+        const selected = items.find((video) => video.id === requestedId)
+        if (selected) selectVideo(selected)
+      })
       .catch((requestError) => setError(requestError.detail || requestError.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [searchParams])
 
   function selectVideo(video) {
     setSelectedVideo(video)
@@ -170,10 +176,6 @@ export default function EditVideoPage() {
                 <option value="private">Riêng tư</option>
               </select>
             </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-              <input type="checkbox" checked={allowComments} onChange={(e) => setAllowComments(e.target.checked)} />
-              <span>Cho phép bình luận</span>
-            </div>
             <label className="field">
               <span>
                 <input type="checkbox" checked={allowComments} onChange={(e) => setAllowComments(e.target.checked)} /> Cho phép bình luận

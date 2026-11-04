@@ -8,9 +8,8 @@ import Icon from '@/shared/components/Icon'
 export default function FeedPage() {
   const [searchParams] = useSearchParams()
   const tag = searchParams.get('tag')?.trim()
-  const [tab, setTab] = useState('for-you')
+  const [view, setView] = useState('video')
 
-  // Giao diện lưới FeedGrid CHỈ ĐƯỢC HIỂN THỊ khi người dùng thực hiện tìm kiếm thẻ nhãn (?tag=...)
   if (tag) {
     return (
       <div className="feed-page">
@@ -30,29 +29,16 @@ export default function FeedPage() {
     )
   }
 
-  // Mặc định tại trang chủ (/ hoặc không có query ?tag=): LUÔN LUÔN render duy nhất cuộn dọc <VideoFeed />
-  // Đã gỡ bỏ hoàn toàn nút chuyển đổi chế độ xem lưới ở góc trên bên phải
   return (
     <div className="feed-page">
       <div className="feed-page-header">
-        <div className="feed-tabs">
-          <button
-            type="button"
-            className={`feed-tab ${tab === 'for-you' ? 'active' : ''}`}
-            onClick={() => setTab('for-you')}
-          >
-            Dành cho bạn
-          </button>
-          <button
-            type="button"
-            className={`feed-tab ${tab === 'following' ? 'active' : ''}`}
-            onClick={() => setTab('following')}
-          >
-            Đang theo dõi
-          </button>
+        <div className="feed-tabs"><span className="feed-tab active">Dành cho bạn</span></div>
+        <div className="feed-view-switch" role="group" aria-label="Chế độ xem video">
+          <button type="button" className={view === 'video' ? 'active' : ''} onClick={() => setView('video')} aria-pressed={view === 'video'}>Video dọc</button>
+          <button type="button" className={view === 'grid' ? 'active' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'}>Lưới</button>
         </div>
       </div>
-      <VideoFeed />
+      {view === 'video' ? <VideoFeed /> : <FeedGrid />}
     </div>
   )
 }

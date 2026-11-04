@@ -27,7 +27,9 @@ function parseTranscript(text) {
       .replace(/\s*\((\/[^)\s]+)+\)/gi, '')
       .trim()
 
-    if (clean.includes('[NSFW-Detection]') || clean.includes('phán quyết:')) {
+    if (clean.startsWith('[NSFW-Detection chưa sẵn sàng:')) {
+      continue
+    } else if (clean.includes('[NSFW-Detection]') || clean.includes('phán quyết:')) {
       const decM = clean.match(/phán\s+quyết:\s*([A-Za-z0-9_]+)/i)
       const confM = clean.match(/độ\s+tin\s+cậy:\s*([0-9.]+)/i)
       const ancM = clean.match(/anchor\s+đã\s+đánh\s+giá:\s*(\d+)/i)
@@ -200,6 +202,7 @@ export default function AiResultPanel({ videoId, result: propResult, loading: pr
   const result = propResult !== undefined ? propResult : internal.result
   const loading = propLoading !== undefined ? propLoading : internal.loading
   const error = internal.error
+  const detectorIssue = result?.error_message || result?.transcript?.split(/\r?\n/).find((line) => line.startsWith('[NSFW-Detection chưa sẵn sàng:'))
 
   if (!videoId) return null
 
@@ -220,6 +223,13 @@ export default function AiResultPanel({ videoId, result: propResult, loading: pr
 
       {result && (
         <>
+          {(result.job_status === 'failed' || detectorIssue) && (
+            <div className="ai-result-warning" role="alert">
+              <strong>{result.job_status === 'failed' ? 'Phân tích video thất bại' : 'Chưa thể chạy model kiểm duyệt'}</strong>
+              {result.job_status === 'succeeded' && <span>Kết quả bên dưới là dữ liệu mô phỏng, chưa được model thực phân tích.</span>}
+              <span>{detectorIssue?.replace(/^\[NSFW-Detection chưa sẵn sàng:\s*/i, '').replace(/\]$/, '') || 'Không nhận được kết quả phân tích từ hệ thống.'}</span>
+            </div>
+          )}
           <div className="ai-labels">
             {result.labels.length === 0 && <p className="ai-empty">Chưa có nhãn nào được gán cho video này.</p>}
             {result.labels.map((label) => (

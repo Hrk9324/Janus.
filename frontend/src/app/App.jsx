@@ -55,7 +55,7 @@ export default function App() {
             <Route
               path="moderation"
               element={
-                <RequireRole roles={['moderator', 'admin']}>
+                <RequireRole roles={['moderator']}>
                   <ModerationPage />
                 </RequireRole>
               }
