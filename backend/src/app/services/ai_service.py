@@ -94,7 +94,8 @@ def _upsert_label(db: Session, name: str) -> Label:
 
 def _apply_mock_result(db: Session, job: AIJob, video: Video, note: str | None = None) -> None:
     """Kết quả AI mô phỏng: transcript dev + nhãn Safe 0.95 và publish video."""
-    job.transcript = f"{note}\n{MOCK_TRANSCRIPT}" if note else MOCK_TRANSCRIPT
+    job.transcript = MOCK_TRANSCRIPT
+    job.error_message = note
     safe_label = _upsert_label(db, SAFE_LABEL)
     db.add(
         VideoLabel(

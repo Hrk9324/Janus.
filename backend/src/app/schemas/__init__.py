@@ -28,6 +28,7 @@ from app.schemas.moderation import (
     AppealResponse,
     ModerationDecisionRequest,
     ModerationQueueItemResponse,
+    ModeratorProfileStatsResponse,
     ReplaceVideoLabelsRequest,
     VideoLabelItem,
 )
@@ -98,6 +99,7 @@ __all__ = [
     "MessageResponse",
     "ModerationDecisionRequest",
     "ModerationQueueItemResponse",
+    "ModeratorProfileStatsResponse",
     "ModeratorStatsResponse",
     "ModeratorWorkloadItem",
     "PasswordForgotRequest",

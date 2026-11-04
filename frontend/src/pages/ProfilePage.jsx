@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
 import { EmptyState, ErrorNote, Spinner, StatusBadge } from '@/shared/components/Feedback'
@@ -6,6 +7,8 @@ import { VIDEO_STATUS_LABEL, formatBytes, formatDateTime } from '@/shared/lib/fo
 import { useAuth } from '@/features/auth/AuthContext'
 import AiResultPanel from '@/features/videos/components/AiResultPanel'
 import { deleteVideo, fetchMyVideos, streamUrl } from '@/features/videos/api/videosApi'
+import { fetchMyModerationStats } from '@/features/moderation/api/moderationApi'
+import '@/styles/profile.css'
 
 const STATUS_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -16,12 +19,22 @@ const STATUS_TABS = [
 
 export default function ProfilePage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [videos, setVideos] = useState([])
   const [activeTab, setActiveTab] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [moderationStats, setModerationStats] = useState(null)
+  const [moderationStatsError, setModerationStatsError] = useState('')
+
+  useEffect(() => {
+    if (user.role !== 'moderator') return
+    fetchMyModerationStats()
+      .then(setModerationStats)
+      .catch((requestError) => setModerationStatsError(requestError.detail || requestError.message))
+  }, [user.role])
 
   const load = useCallback(async () => {
     setError('')
@@ -96,7 +109,7 @@ export default function ProfilePage() {
         <div>
           <h1>{user.display_name}</h1>
           <p className="page-sub">
-            {user.email} · vai trò <strong>{user.role}</strong>
+            {user.email} · vai trò <strong>{user.role === 'moderator' ? 'Kiểm duyệt viên' : user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</strong>
           </p>
         </div>
         <div className="stat-row">
@@ -136,6 +149,17 @@ export default function ProfilePage() {
       </div>
 
       <ErrorNote>{error}</ErrorNote>
+
+      {user.role === 'moderator' && <section className="moderator-profile-stats" aria-label="Thống kê kiểm duyệt">
+        <div className="moderator-profile-heading"><div><span className="overline">KHÔNG GIAN MODERATOR</span><h2>Hoạt động kiểm duyệt</h2></div><span className="moderator-role-chip">Moderator</span></div>
+        {moderationStatsError && <ErrorNote>{moderationStatsError}</ErrorNote>}
+        <div className="moderator-stat-grid">
+          <article><span>Quyết định đã xử lý</span><strong>{moderationStats?.decisions_count ?? '—'}</strong></article>
+            <article><span>Video bị từ chối</span><strong>{moderationStats?.rejected_videos_count ?? '—'}</strong></article>
+          <article><span>Báo cáo đang chờ</span><strong>{moderationStats?.open_reports_count ?? '—'}</strong></article>
+          <article><span>Khiếu nại đã xử lý</span><strong>{moderationStats?.handled_appeals_count ?? '—'}</strong></article>
+        </div>
+      </section>}
 
       {videos.length === 0 ? (
         <EmptyState
@@ -177,7 +201,7 @@ export default function ProfilePage() {
                   <li key={video.id} className={video.id === selectedId ? 'video-row active' : 'video-row'}>
                     <button type="button" className="video-row-main" onClick={() => setSelectedId(video.id)}>
                       <span className="video-row-thumb">
-                        <video src={streamUrl(video.id)} muted playsInline preload="metadata" />
+                        <video src={streamUrl(video.id)} poster={video.thumbnail_url || undefined} muted playsInline preload="none" />
                       </span>
                       <span className="video-row-copy">
                         <strong>{video.caption || video.original_filename}</strong>
@@ -187,16 +211,14 @@ export default function ProfilePage() {
                       </span>
                       <StatusBadge status={video.status} label={VIDEO_STATUS_LABEL[video.status] || video.status} />
                     </button>
-                    <button
-                      type="button"
-                      className="icon-button danger"
-                      onClick={() => remove(video)}
-                      disabled={busyId === video.id}
-                      aria-label="Xóa video"
-                      title="Xóa video"
-                    >
-                      <Icon name="trash" size={16} />
-                    </button>
+                    <span className="video-row-actions">
+                      <button type="button" className="button ghost small" onClick={() => navigate(`/edit-video?video_id=${encodeURIComponent(video.id)}`)}>
+                        <Icon name="edit" size={14} /> Chỉnh sửa
+                      </button>
+                      <button type="button" className="icon-button danger" onClick={() => remove(video)} disabled={busyId === video.id} aria-label="Xóa video" title="Xóa video">
+                        <Icon name="trash" size={16} />
+                      </button>
+                    </span>
                   </li>
                 ))}
               </ul>

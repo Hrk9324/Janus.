@@ -118,5 +118,6 @@ class AIResultResponse(BaseModel):
     video_id: UUID
     job_status: str
     transcript: str | None
+    error_message: str | None = None
     labels: list[LabelResponse]
     video_status: VideoStatus | None = None

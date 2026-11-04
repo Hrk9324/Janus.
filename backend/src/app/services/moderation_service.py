@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.exceptions import ConflictError, InvalidInputError, NotFoundError
@@ -154,6 +154,38 @@ def list_open_reports(db: Session) -> list[Report]:
             select(Report).where(Report.status == ReportStatus.open).order_by(Report.created_at)
         )
     )
+
+
+def get_moderator_profile_stats(db: Session, moderator: User) -> dict[str, int]:
+    decisions_count = db.scalar(
+        select(func.count(ModerationReview.id)).where(
+            ModerationReview.moderator_id == moderator.id
+        )
+    ) or 0
+    rejected_videos_count = db.scalar(
+        select(func.count(func.distinct(Video.id)))
+        .join(ModerationReview, ModerationReview.video_id == Video.id)
+        .where(
+            ModerationReview.moderator_id == moderator.id,
+            Video.status == VideoStatus.rejected,
+            Video.is_deleted.is_(False),
+        )
+    ) or 0
+    open_reports_count = db.scalar(
+        select(func.count(Report.id)).where(Report.status == ReportStatus.open)
+    ) or 0
+    handled_appeals_count = db.scalar(
+        select(func.count(Appeal.id)).where(
+            Appeal.moderator_id == moderator.id,
+            Appeal.status != AppealStatus.open,
+        )
+    ) or 0
+    return {
+        "decisions_count": decisions_count,
+        "rejected_videos_count": rejected_videos_count,
+        "open_reports_count": open_reports_count,
+        "handled_appeals_count": handled_appeals_count,
+    }
 
 
 def decide_report(db: Session, report_id: UUID, moderator: User, action: ModerationAction, reason: str | None) -> None:

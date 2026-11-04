@@ -1,116 +1,90 @@
-# Mô tả các màn hình & chức năng (Frontend)
+# Màn hình và chức năng Frontend
 
-Tài liệu này mô tả các trang (screens) hiện có trong frontend, chức năng tương ứng, route, quyền truy cập và các component/features liên quan.
+Tài liệu này mô tả các màn hình hiện có trong `frontend/src`, cách truy cập và các chức năng chính.
 
-## Tổng quan routes (từ `src/app/App.jsx`)
+## Route và quyền truy cập
 
-| Route | Component | Layout | Quyền truy cập | Mô tả |
-|---|---|---|---|---|
-| `/` | `FeedPage` | `MainLayout` | Công khai (ai cũng xem được) | Trang feed video ngắn (hiển thị danh sách video đã được phân tích/published theo feed). |
-| `/upload` | `UploadPage` | `MainLayout` | `RequireAuth` (cần đăng nhập) | Tải video lên, nhập caption, theo dõi tiến trình upload và kết quả phân tích AI. |
-| `/profile` | `ProfilePage` | `MainLayout` | `RequireAuth` (cần đăng nhập) | Quản lý video cá nhân: danh sách video của user, xem kết quả AI, xóa video. |
-| `/moderation` | `ModerationPage` | `MainLayout` | `RequireRole` (`moderator`, `admin`) | Hàng đợi kiểm duyệt: duyệt/từ chối video chờ duyệt và xử lý báo cáo người dùng. |
-| `/login` | `LoginPage` | Không có (auth-shell) | Công khai | Đăng nhập tài khoản. |
-| `/register` | `RegisterPage` | Không có (auth-shell) | Công khai | Đăng ký tài khoản mới. |
-| `*` | `Navigate to="/"` | - | Công khai | Chuyển hướng về trang chủ nếu route không tồn tại. |
+| Route | Màn hình | Quyền | Chức năng |
+|---|---|---|---|
+| `/` | Feed | Công khai | Xem video dạng cuộn dọc hoặc chuyển sang chế độ lưới; có thể tìm video theo nhãn qua `?tag=...`. |
+| `/login` | Đăng nhập | Công khai | Đăng nhập bằng email và mật khẩu. |
+| `/register` | Đăng ký | Công khai | Tạo tài khoản người dùng mới. |
+| `/upload` | Tải video | Cần đăng nhập | Tải video MP4, thêm caption và theo dõi kết quả phân tích. |
+| `/profile` | Hồ sơ | Cần đăng nhập | Xem và quản lý video của mình; moderator có thêm thống kê kiểm duyệt. |
+| `/edit-video?video_id=...` | Chỉnh sửa video | Cần đăng nhập, video thuộc tài khoản | Chỉnh caption, quyền hiển thị và quyền bình luận; được mở từ danh sách video trong hồ sơ. |
+| `/bookmarks` | Video đã lưu | Cần đăng nhập | Xem, phát và bỏ lưu video. |
+| `/moderation` | Kiểm duyệt | Chỉ moderator | Xử lý hàng đợi video, báo cáo và khiếu nại. |
+| `/admin` | Quản trị | Chỉ admin | Xem thống kê hệ thống, quản lý tài khoản và nhãn. |
+| Route khác | Chuyển hướng | Công khai | Chuyển về `/`. |
 
-## Chi tiết các màn hình
+Các route nội dung dùng `MainLayout` với thanh điều hướng và thanh tiêu đề. Đăng nhập và đăng ký dùng giao diện xác thực riêng.
 
-### 1. FeedPage (`src/pages/FeedPage.jsx`)
-- **Chức năng chính:** Hiển thị feed video.
-- **Thành phần sử dụng:** `VideoFeed` (`src/features/videos/components/VideoFeed.jsx`).
-- **Chi tiết:** Trang chỉ render `VideoFeed`, toàn bộ logic hiển thị feed (lấy danh sách, phát video, tương tác...) nằm ở component `VideoFeed`.
+## Chi tiết màn hình
 
-### 2. LoginPage (`src/pages/LoginPage.jsx`)
-- **Chức năng chính:** Giao diện đăng nhập.
-- **Thành phần sử dụng:** `AuthCard` với `mode="login"` (`src/features/auth/components/AuthCard.jsx`).
-- **Layout:** `.auth-shell` (không sử dụng `MainLayout`).
-- **Chi tiết:** Chỉ render form đăng nhập, logic đăng nhập/điều hướng nằm ở `AuthCard` và `AuthContext`.
+### Feed — `FeedPage`
 
-### 3. RegisterPage (`src/pages/RegisterPage.jsx`)
-- **Chức năng chính:** Giao diện đăng ký tài khoản.
-- **Thành phần sử dụng:** `AuthCard` với `mode="register"`.
-- **Layout:** `.auth-shell`.
-- **Chi tiết:** Tương tự LoginPage, xử lý đăng ký tài khoản mới.
+- Mặc định hiển thị video dọc; có nút chuyển giữa **Video dọc** và **Lưới**.
+- Feed dọc hỗ trợ phát, thích, theo dõi, lưu, bình luận và báo cáo video theo trạng thái đăng nhập.
+- Chế độ lưới hiển thị video, người đăng, lượt xem và nhãn phù hợp; tải thêm video theo trang.
+- Khi mở route với `?tag=...`, hiển thị danh sách video theo nhãn và liên kết quay về feed.
 
-### 4. UploadPage (`src/pages/UploadPage.jsx`)
-- **Chức năng chính:** Tải video lên và theo dõi phân tích AI.
-- **Quyền:** Cần đăng nhập.
-- **Thành phần sử dụng:**
-  - `UploadDropzone` - Chọn/kéo thả file video MP4.
-  - `useVideoUpload()` hook - Quản lý trạng thái upload, tiến trình, kết quả upload.
-  - `AiResultPanel` - Hiển kết quả phân tích AI sau khi upload thành công.
-  - `Icon`, `ErrorNote` - Component dùng chung.
-- **Chức năng cụ thể:**
-  - **Chọn file:** Kéo thả hoặc chọn file MP4 (giới hạn hiển thị "MP4 · tối đa 50 MB").
-  - **Nhập caption:** Ô nhập mô tả không bắt buộc (tối đa 500 ký tự).
-  - **Upload:** Gửi file + caption lên backend, theo dõi % tiến trình upload.
-  - **Sau khi upload thành công:** Hiển thị 2 nút "Tải video khác" (reset form) và "Xem ở feed" (đến `/`).
-  - **Thông tin hỗ trợ:** Panel bên phải mô t right các thông tin về quy trình kiểm duyệt tự động (kiểm tra magic bytes/codec, chạy job AI nền, poll kết quả, video xuất hiện ở feed sau khi phân tích xong, báo cáo có thể đưa vào hàng đợi kiểm duyệt).
-  - **Kết quả AI:** Nếu upload thành công (`uploadedVideo` tồn tại), hiển thị `AiResultPanel` để xem kết quả phân tích AI của video vừa upload.
+### Đăng nhập và đăng ký — `LoginPage`, `RegisterPage`
 
-### 5. ProfilePage (`src/pages/ProfilePage.jsx`)
-- **Chức năng chính:** Trang cá nhân - quản lý video của người dùng hiện tại.
-- **Quyền:** Cần đăng nhập.
-- **Thành phần sử dụng:**
-  - `useAuth()` - Lấy thông tin user hiện tại.
-  - `fetchMyVideos()`, `deleteVideo()`, `streamUrl()` từ `features/videos/api/videosApi`.
-  - `AiResultPanel` - Xem kết quả phân tích AI của video được chọn.
-  - `StatusBadge`, `Spinner`, `EmptyState`, `ErrorNote` - Components dùng chung.
-- **Chức năng cụ thể:**
-  - **Header profile:** Hiển thị avatar (2 chữ cái đầu tên), tên hiển thị, email, vai trò, thống kê (tổng số video, số video "Đã phát"/`published`, số video "Chờ duyệt"/`pending_review`).
-  - **Danh sách video:** Danh sách các video đã upload của user, mỗi item hiển thị thumbnail (video muted/preload metadata), tên/caption, ngày tạo, dung lượng, trạng thái (`StatusBadge` với label theo `VIDEO_STATUS_LABEL`).
-  - **Chọn video:** Click vào video trong danh sách để xem kết quả phân tích AI (`AiResultPanel`) bên phía phải.
-  - **Xóa video:** Nút xóa với icon thùng rác, có trạng thái `busyId` khi đang xóa.
-  - **Trạng thái trống:** Nếu chưa có video nào, hiển
-  - **Trạng thái trống:** Nếu chưa có video nào, hiển thị `EmptyState` với nút "Tải video đầu tiên" dẫn đến `/upload`.
+- Hai màn hình dùng chung `AuthCard` và `AuthContext`.
+- Đăng nhập bằng email và mật khẩu; đăng ký bằng tên hiển thị, email và mật khẩu.
+- Phiên đăng nhập và thông tin người dùng được lấy từ backend; route được bảo vệ bằng `RequireAuth` hoặc `RequireRole`.
 
-### 6. ModerationPage (`src/pages/ModerationPage.jsx`)
-- **Chức năng chính:** Hàng đợi kiểm duyệt dành cho `moderator` và `admin`.
-- **Quyền:** `RequireRole` với roles `['moderator', 'admin']`.
-- **Thành phần sử dụng:**
-  - `useModerationList()` hook - Quản lý danh sách (queue/reports).
-  - `fetchQueue()`, `fetchReports()`, `decideVideo()`, `decideReport()` từ `features/moderation/api/moderationApi`.
-  - `streamUrl()` từ `features/videos/api/videosApi`.
-  - `Icon`, `Spinner, EmptyState, ErrorNote` - Components dùng chung.
-- **Chức năng cụ thể:**
-  - **Tabs:** Chuyển đổi giữa 2 tab: "Hàng đợi video" (`queue`) và "Báo cáo" (`reports`).
-  - **Tab hàng đợi video:**
-    - Danh sách các video đang chờ duyệt (`pending_review`).
-    - Mỗi card hiển thị video preview (controls), caption/original_filename, owner, dung lượng, ngày tạo, badge trạng thái "Chờ duyệt".
-    - **Duyệt đăng:** `approve` - Duyệt video, chuyển trạng thái thành công (có thể `published`).
-    - **Từ chối:** `reject` - Từ chối video.
-  - **Tab báo cáo:**
-    - Danh sách báo cáo đang mở (`Report`).
-    - Mỗi card hiển trường lý báo cáo ("reason"), thông tin video bị báo cáo.
-    - **Xác nhận vi phạm:** `approve` - Xác nhận báo cáo, xử lý theo hành động vi phạm.
-    - **Bác bỏ báo cáo:** `reject` - Bác bỏ báo cáo không đúng.
-  - **Refresh tự động:** Sau khi quyết định xong, gọi `queue.refresh()` và `reports.refresh()`.
-  - **Trạng thái trống:** Hiển thị `EmptyState` nếu không có gì trong tab hiện tại.
+### Tải video — `UploadPage`
 
-## Layout & Navigation
+- Chọn hoặc kéo thả video MP4, nhập caption và gửi lên backend.
+- Hiển thị tiến trình, lỗi tải lên và kết quả phân tích AI sau khi tạo video.
+- Kết quả AI được hiển thị trong `AiResultPanel`, gồm trạng thái job, nhãn, độ tin cậy, thông tin model và bản chép lời nếu có.
+- Nếu model chưa sẵn sàng, giao diện hiển thị lý do và đánh dấu kết quả mô phỏng.
 
-- **MainLayout** (`src/app/layout/MainLayout.jsx`): Layout chung cho các trang có trong routes (Feed, Upload, Profile, Moderation). Thường chứa `SideNav` và `TopBar`.
-- **SideNav** (`src/app/layout/SideNav.jsx`): Điều hướng chính (Feed, Upload, Profile, Modertaion nếu có quyền).
-- **TopBar** (`src/app/layout/TopBar.jsx`): Thanh trên, thông tin user/auth.
-- **AuthContext** (`src/features/auth/AuthContext.jsx`): Quản lý trạng thái đăng nhập, user, token, các hàm `login`, logout, `register`, etc.
-- **Guards** (`src/app/guards.jsx`): `RequireAuth` và `RequireRole` để bảo vệ route.
+### Hồ sơ — `ProfilePage`
 
-## Features liên quan
+- Hiển thị tên, email, vai trò và số video theo trạng thái.
+- Danh sách video có tên/caption, thời điểm tạo, dung lượng và trạng thái.
+- Có thể chọn video để xem kết quả AI, mở chỉnh sửa video hoặc xóa video.
+- Hồ sơ moderator có thêm số quyết định đã xử lý, video bị từ chối, báo cáo đang chờ và khiếu nại đã xử lý.
 
-| Feature | Thư mục | Mô tả |
-| h1::\{11 |
--|---|---|---|
-| `auth` | `src/features/auth/` | Đăng nhập, đăng ký, AuthContext, AuthCard, guard logic.
-| `videos` | `src/features/videos/` | Upload video, feed, AiResultPanel, API/video hooks, xử lý upload và phân tích AI.
-| `moderation` | `src/features/moderation/` | Hàng đợi kiểm duyệt, xử lý báo cáo, API/mod hooks.
-| `shared` | `src/shared/` | Components dùng chung (Icon, Feedback, etc., UI elements), utilities, formatters, lib.
+### Chỉnh sửa video — `EditVideoPage`
 
-## Ghi chú
+- Được mở từ nút **Chỉnh sửa** của từng video trong hồ sơ, kèm `video_id`.
+- Cập nhật caption, chế độ hiển thị công khai/riêng tư và quyền bình luận.
+- Lưu thay đổi rồi quay về hồ sơ.
 
-- FE hiện đang giả định backend chạy tại 1 địa chỉ nào đó (xem các file API trong features) và sẽ không hoạt động nếu backend không kết nối được.
-- `AiResultPanel` được sử dụng nhiều lần (UploadPage sau upload, ProfilePage khi chọn video) để hiển thị kết quả phân tích AI của video.
-- Trang `FeedPage` chỉ là wrapper đơn giản cho `VideoFeed`, cần xem chi tiết component này để hiểu chính xác chức năng feed.
-- Routes dành cho auth (`login`, `register`) không dùng `MainLayout` để tạo không gian đăng nhập riêng biệt.
+### Video đã lưu — `BookmarksPage`
 
-**Ngày cập nhật:** Fri Oct 30 2026
+- Hiển thị video đã lưu với caption hoặc tên file, người đăng, ngày tạo và lượt xem.
+- Phát video trực tiếp hoặc bỏ video khỏi danh sách đã lưu.
+
+### Kiểm duyệt — `ModerationPage`
+
+- Chỉ moderator được vào màn hình và gọi các chức năng kiểm duyệt.
+- Có ba mục: hàng đợi video, báo cáo và khiếu nại.
+- Moderator có thể duyệt/từ chối video, xác nhận/bác bỏ báo cáo và chấp nhận/giữ quyết định khiếu nại.
+- Sau mỗi quyết định, các danh sách được tải lại.
+
+### Quản trị — `AdminPage`
+
+- Chỉ admin được vào màn hình.
+- **Thống kê:** số người dùng, video, video chờ duyệt, báo cáo đang chờ; phân bố trạng thái video/job/báo cáo/khiếu nại và khối lượng kiểm duyệt.
+- **Quản trị tài khoản:** tìm tài khoản, đổi vai trò và khóa/mở khóa tài khoản.
+- **Quản trị nhãn:** thêm nhãn và bật/tắt nhãn.
+- Admin không có quyền truy cập màn hình hoặc API xử lý hàng đợi kiểm duyệt.
+
+## Các phần dùng chung
+
+- `src/app/App.jsx`: khai báo route và bảo vệ quyền.
+- `src/app/layout/MainLayout.jsx`, `SideNav.jsx`, `TopBar.jsx`: bố cục và điều hướng.
+- `src/features/auth/`: đăng nhập, đăng ký và quản lý phiên.
+- `src/features/videos/`: feed, upload, tương tác xã hội và kết quả AI.
+- `src/features/moderation/`: hàng đợi, báo cáo, khiếu nại và thống kê moderator.
+- `src/features/admin/`: thống kê, tài khoản và nhãn quản trị.
+
+## Tài khoản kiểm thử
+
+Thông tin đăng nhập kiểm thử cục bộ nằm trong `TEST_CREDENTIALS.md` ở thư mục gốc. File này được bỏ qua bởi Git vì chứa mật khẩu dạng văn bản; không đưa nội dung tài khoản vào tài liệu được chia sẻ.
+
+**Cập nhật:** 04/11/2026

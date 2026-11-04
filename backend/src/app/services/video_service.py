@@ -174,6 +174,7 @@ def get_ai_result(db: Session, video_id: UUID, requester: User) -> AIResultRespo
         video_id=video_id,
         job_status=job.status.value if job else "unknown",
         transcript=job.transcript if job else None,
+        error_message=job.error_message if job else None,
         labels=labels,
         video_status=video.status,
     )

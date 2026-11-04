@@ -286,6 +286,23 @@
   font-size: 13px;
 }
 
+.ai-result-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(240, 173, 78, .34);
+  border-radius: 10px;
+  background: rgba(240, 173, 78, .08);
+  color: #f2c77f;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.ai-result-warning strong { color: #ffda99; font-size: 12px; }
+
 /* ===== AI Transcript & Formatted Analysis ===== */
 .ai-transcript {
   margin-top: 16px;

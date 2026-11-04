@@ -34,3 +34,7 @@ export function decideAppeal(appealId, action, reason) {
     body: { action, reason: reason || null },
   })
 }
+
+export function fetchMyModerationStats() {
+  return apiFetch('/v1/moderation/stats/me')
+}
