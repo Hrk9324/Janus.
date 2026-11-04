@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 backend/.env
+/TEST_CREDENTIALS.md
 
 # Python environments, caches, and test reports
 .venv/
