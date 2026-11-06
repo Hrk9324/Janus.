@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { EmptyState, ErrorNote, Spinner } from '@/shared/components/Feedback'
 import { useFeed } from '../hooks/useFeed'
@@ -8,10 +8,14 @@ import VideoSlide from './VideoSlide'
  * Feed cuộn dọc toàn màn hình kiểu TikTok (Snap-scrolling).
  * Mỗi slide giữ video element để có thể phát thủ công; chỉ slide đang xem được tải trước.
  */
-export default function VideoFeed() {
+export default function VideoFeed({ focusVideo = null }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const { videos, loading, error, refresh } = useFeed(activeIndex)
   const containerRef = useRef(null)
+  const displayVideos = useMemo(() => {
+    if (!focusVideo) return videos
+    return [focusVideo, ...videos.filter((video) => video.id !== focusVideo.id)]
+  }, [focusVideo, videos])
 
   useEffect(() => {
     const container = containerRef.current
@@ -57,9 +61,25 @@ export default function VideoFeed() {
       observer.disconnect()
       container.removeEventListener('scroll', handleScroll)
     }
-  }, [videos])
+  }, [displayVideos])
 
-  if (loading) {
+  useEffect(() => {
+    if (!focusVideo || displayVideos.length === 0) return undefined
+    const focusedIndex = displayVideos.findIndex((video) => video.id === focusVideo.id)
+    const container = containerRef.current
+    const slide = container?.querySelectorAll('.slide')[focusedIndex]
+    if (!container || !slide || focusedIndex < 0) return undefined
+
+    setActiveIndex(focusedIndex)
+    const frame = window.requestAnimationFrame(() => {
+      const containerTop = container.getBoundingClientRect().top
+      const slideTop = slide.getBoundingClientRect().top
+      container.scrollTop = container.scrollTop + slideTop - containerTop
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [displayVideos, focusVideo])
+
+  if (loading && displayVideos.length === 0) {
     return (
       <div className="feed-center">
         <Spinner label="Đang tải feed" />
@@ -67,7 +87,7 @@ export default function VideoFeed() {
     )
   }
 
-  if (error) {
+  if (error && displayVideos.length === 0) {
     return (
       <div className="feed-center">
         <ErrorNote>{error}</ErrorNote>
@@ -78,7 +98,7 @@ export default function VideoFeed() {
     )
   }
 
-  if (!Array.isArray(videos) || videos.length === 0) {
+  if (!Array.isArray(displayVideos) || displayVideos.length === 0) {
     return (
       <div className="feed-center">
         <EmptyState
@@ -98,7 +118,7 @@ export default function VideoFeed() {
   return (
     <div className="feed-wrapper">
       <div className="feed" ref={containerRef}>
-        {videos.map((video, index) => (
+        {displayVideos.map((video, index) => (
           <VideoSlide
             key={video._loopKey || video.id}
             video={video}

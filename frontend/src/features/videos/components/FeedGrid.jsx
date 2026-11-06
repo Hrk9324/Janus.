@@ -12,14 +12,13 @@ function keepPublishedVideos(items = []) {
   ))
 }
 
-export default function FeedGrid({ activeTag = '', onWatchingChange }) {
+export default function FeedGrid({ activeTag = '', onSelectVideo }) {
   const [videos, setVideos] = useState([])
   const [cursor, setCursor] = useState(null)
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
-  const [selectedVideo, setSelectedVideo] = useState(null)
 
   const fetchPage = useCallback(async (nextCursor = null) => {
     const request = activeTag
@@ -62,48 +61,6 @@ export default function FeedGrid({ activeTag = '', onWatchingChange }) {
     }
   }
 
-  if (selectedVideo) {
-    const authorName = selectedVideo.author?.username || selectedVideo.owner_name || selectedVideo.username || 'nhà sáng tạo Janus'
-    const title = selectedVideo.caption || selectedVideo.original_filename || 'Video không tiêu đề'
-    const source = selectedVideo.stream_url || `/api/v1/videos/${selectedVideo.id}/stream`
-
-    return (
-      <section className="feed-grid-watch" aria-label="Đang xem video">
-        <header className="feed-grid-watch-header">
-          <button type="button" className="button ghost small" onClick={() => { setSelectedVideo(null); onWatchingChange?.(false) }}>
-            <Icon name="arrow" size={14} style={{ transform: 'rotate(180deg)' }} />
-            <span>Quay lại lưới</span>
-          </button>
-          <span className="feed-grid-watch-count">{Number(selectedVideo.view_count || 0).toLocaleString('vi-VN')} lượt xem</span>
-        </header>
-        <div className="feed-grid-watch-content">
-          <div className="feed-grid-watch-player">
-            <video
-              key={selectedVideo.id}
-              src={source}
-              poster={selectedVideo.thumbnail_url || undefined}
-              controls
-              autoPlay
-              muted
-              playsInline
-              onError={() => setError('Video này hiện không phát được.')}
-            />
-          </div>
-          <div className="feed-grid-watch-meta">
-            <span className="feed-grid-watch-author">@{authorName}</span>
-            <h1>{title}</h1>
-            {selectedVideo.matched_labels?.length > 0 && (
-              <div className="feed-grid-labels">
-                {selectedVideo.matched_labels.map((label) => <span key={label}>#{label}</span>)}
-              </div>
-            )}
-            {error && <p className="feed-grid-watch-error" role="status">{error}</p>}
-          </div>
-        </div>
-      </section>
-    )
-  }
-
   if (loading) return <div className="feed-grid-empty">Đang tải video…</div>
   if (error && videos.length === 0) return <div className="feed-grid-empty"><span>{error}</span><button type="button" className="button ghost" onClick={refresh}>Thử lại</button></div>
   if (!videos.length) return <div className="feed-grid-empty">Chưa có video nào được đăng</div>
@@ -119,7 +76,7 @@ export default function FeedGrid({ activeTag = '', onWatchingChange }) {
               key={video._loopKey || video.id}
               type="button"
               className="feed-grid-card"
-              onClick={() => { setError(''); setSelectedVideo(video); onWatchingChange?.(true) }}
+              onClick={() => onSelectVideo?.(video)}
               aria-label={`Xem video: ${title}`}
             >
               <span className="feed-grid-thumb">
