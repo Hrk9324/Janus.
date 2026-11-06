@@ -19,7 +19,7 @@ function shuffleArray(array) {
  * - First load: Nạp trước 2-3 video (limit=3).
  * - Phân trang cursor: Khi gần tới cuối feed (activeIndex >= videos.length - 2), nạp tiếp 2 video (limit=2).
  * - Infinite Loop / Shuffle: Khi backend hết video (has_more=false), tự động xáo trộn pool video
- *   và nối tiếp vào feed với key duy nhất (`${id}-loop-${loopCount}`) giúp người dùng cuộn mãi mãi.
+ *   và nối tiếp vào feed với key duy nhất để người dùng cuộn liên tục.
  */
 export function useFeed(activeIndex = 0) {
   const [videos, setVideos] = useState([])
@@ -32,17 +32,22 @@ export function useFeed(activeIndex = 0) {
   const hasMoreRef = useRef(true)
   const nextCursorRef = useRef(null)
   const loopCountRef = useRef(0)
+  const pageSequenceRef = useRef(0)
+  const refreshSequenceRef = useRef(0)
   const isFetchingRef = useRef(false)
 
   // Khởi tạo hoặc tải lại feed từ đầu
   const refresh = useCallback(async () => {
+    const requestSequence = ++refreshSequenceRef.current
     setError('')
     setLoading(true)
     isFetchingRef.current = true
-    loopCountRef.current = 0
     try {
       const res = await fetchFeed({ limit: 3 })
+      if (requestSequence !== refreshSequenceRef.current) return
       const items = res?.items || (Array.isArray(res) ? res : [])
+      loopCountRef.current = 0
+      pageSequenceRef.current = 0
       poolRef.current = [...items]
       hasMoreRef.current = Boolean(res?.has_more && res?.next_cursor)
       nextCursorRef.current = res?.next_cursor || null
@@ -53,12 +58,15 @@ export function useFeed(activeIndex = 0) {
       }))
       setVideos(initialVideos)
     } catch (requestError) {
+      if (requestSequence !== refreshSequenceRef.current) return
       setError(requestError.detail || requestError.message || 'Không thể tải feed video.')
       setVideos([])
       poolRef.current = []
     } finally {
-      setLoading(false)
-      isFetchingRef.current = false
+      if (requestSequence === refreshSequenceRef.current) {
+        setLoading(false)
+        isFetchingRef.current = false
+      }
     }
   }, [])
 
@@ -69,34 +77,39 @@ export function useFeed(activeIndex = 0) {
 
     // 1. Nếu Backend vẫn còn video mới
     if (hasMoreRef.current && nextCursorRef.current) {
+      const requestSequence = refreshSequenceRef.current
       isFetchingRef.current = true
       setLoadingMore(true)
       try {
         const res = await fetchFeed({ limit: 2, cursor: nextCursorRef.current })
+        if (requestSequence !== refreshSequenceRef.current) return
         const newItems = res?.items || []
         hasMoreRef.current = Boolean(res?.has_more && res?.next_cursor)
         nextCursorRef.current = res?.next_cursor || null
 
         if (newItems.length > 0) {
-          newItems.forEach((item) => {
-            if (!poolRef.current.some((p) => p.id === item.id)) {
-              poolRef.current.push(item)
-            }
-          })
-          const loopCount = loopCountRef.current
-          const mapped = newItems.map((item, idx) => ({
-            ...item,
-            _loopKey: `${item.id}-page-${loopCount}-${idx}`,
-          }))
-          setVideos((prev) => [...prev, ...mapped])
-          return
+          const knownIds = new Set(poolRef.current.map((item) => item.id))
+          const freshItems = newItems.filter((item) => !knownIds.has(item.id))
+          freshItems.forEach((item) => poolRef.current.push(item))
+
+          if (freshItems.length > 0) {
+            const pageSequence = pageSequenceRef.current++
+            const mapped = freshItems.map((item, idx) => ({
+              ...item,
+              _loopKey: `${item.id}-page-${pageSequence}-${idx}`,
+            }))
+            setVideos((prev) => [...prev, ...mapped])
+            return
+          }
         }
       } catch {
         // Lỗi kết nối khi nạp tiếp -> tạm chuyển sang chế độ xoay vòng pool
-        hasMoreRef.current = false
+        if (requestSequence === refreshSequenceRef.current) hasMoreRef.current = false
       } finally {
-        isFetchingRef.current = false
-        setLoadingMore(false)
+        if (requestSequence === refreshSequenceRef.current) {
+          isFetchingRef.current = false
+          setLoadingMore(false)
+        }
       }
     }
 

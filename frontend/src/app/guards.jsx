@@ -21,7 +21,7 @@ export function RequireAuth({ children }) {
   return children
 }
 
-/** Yêu cầu vai trò (moderator/admin) cho các trang quản trị. */
+/** Yêu cầu một trong các vai trò được phép truy cập trang. */
 export function RequireRole({ roles, children }) {
   const { user, ready } = useAuth()
 

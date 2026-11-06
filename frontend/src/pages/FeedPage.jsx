@@ -8,51 +8,52 @@ import Icon from '@/shared/components/Icon'
 export default function FeedPage() {
   const [searchParams] = useSearchParams()
   const tag = searchParams.get('tag')?.trim()
-  const [tab, setTab] = useState('for-you')
+  const [view, setView] = useState('video')
+  const [focusedVideo, setFocusedVideo] = useState(null)
 
-  // Giao diện lưới FeedGrid CHỈ ĐƯỢC HIỂN THỊ khi người dùng thực hiện tìm kiếm thẻ nhãn (?tag=...)
+  function selectGridVideo(video) {
+    setFocusedVideo(video)
+    setView('video')
+  }
+
   if (tag) {
     return (
       <div className="feed-page">
         <div className="feed-page-header">
           <div className="feed-tabs">
-            <span className="feed-tab active">
-              #{tag}
-            </span>
+            <span className="feed-tab active">#{tag}</span>
           </div>
-          <Link to="/" className="button ghost small" aria-label="Quay lại feed chính">
-            <Icon name="arrow" size={14} style={{ transform: 'rotate(180deg)' }} />
-            <span>Xem feed cuộn</span>
-          </Link>
+          {focusedVideo ? (
+            <button type="button" className="button ghost small" onClick={() => setFocusedVideo(null)}>
+              <Icon name="arrow" size={14} style={{ transform: 'rotate(180deg)' }} />
+              <span>Quay lại lưới</span>
+            </button>
+          ) : (
+            <Link to="/" className="button ghost small" aria-label="Quay lại feed chính">
+              <Icon name="arrow" size={14} style={{ transform: 'rotate(180deg)' }} />
+              <span>Xem feed cuộn</span>
+            </Link>
+          )}
         </div>
-        <FeedGrid activeTag={tag} />
+        {focusedVideo
+          ? <VideoFeed focusVideo={focusedVideo} />
+          : <FeedGrid activeTag={tag} onSelectVideo={selectGridVideo} />}
       </div>
     )
   }
 
-  // Mặc định tại trang chủ (/ hoặc không có query ?tag=): LUÔN LUÔN render duy nhất cuộn dọc <VideoFeed />
-  // Đã gỡ bỏ hoàn toàn nút chuyển đổi chế độ xem lưới ở góc trên bên phải
   return (
     <div className="feed-page">
       <div className="feed-page-header">
-        <div className="feed-tabs">
-          <button
-            type="button"
-            className={`feed-tab ${tab === 'for-you' ? 'active' : ''}`}
-            onClick={() => setTab('for-you')}
-          >
-            Dành cho bạn
-          </button>
-          <button
-            type="button"
-            className={`feed-tab ${tab === 'following' ? 'active' : ''}`}
-            onClick={() => setTab('following')}
-          >
-            Đang theo dõi
-          </button>
+        <div className="feed-tabs"><span className="feed-tab active">Dành cho bạn</span></div>
+        <div className="feed-view-switch" role="group" aria-label="Chế độ xem video">
+          <button type="button" className={view === 'video' ? 'active' : ''} onClick={() => setView('video')} aria-pressed={view === 'video'}>Video dọc</button>
+          <button type="button" className={view === 'grid' ? 'active' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'}>Lưới</button>
         </div>
       </div>
-      <VideoFeed />
+      {view === 'video'
+        ? <VideoFeed focusVideo={focusedVideo} />
+        : <FeedGrid onSelectVideo={selectGridVideo} />}
     </div>
   )
 }

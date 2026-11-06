@@ -6,6 +6,8 @@ export const fetchAdminUsers = (search = '') => {
   if (search.trim()) query.set('search', search.trim())
   return apiFetch(`/v1/admin/users?${query}`)
 }
-export const fetchAuditLogs = () => apiFetch('/v1/admin/audit-logs?limit=50')
 export const setUserActive = (userId, isActive) => apiFetch(`/v1/admin/users/${userId}/status`, { method: 'PATCH', body: { is_active: isActive } })
 export const setUserRole = (userId, role) => apiFetch(`/v1/admin/users/${userId}/role`, { method: 'PATCH', body: { role } })
+export const fetchAdminLabels = () => apiFetch('/v1/admin/labels')
+export const createAdminLabel = (name) => apiFetch('/v1/admin/labels', { method: 'POST', body: { name } })
+export const updateAdminLabel = (labelId, patch) => apiFetch(`/v1/admin/labels/${labelId}`, { method: 'PATCH', body: patch })

@@ -1,79 +1,109 @@
-import { useFeed } from '../hooks/useFeed'
-import { useTagSearch } from '../hooks/useTagSearch'
+import { useCallback, useEffect, useState } from 'react'
+
 import Icon from '@/shared/components/Icon'
+import { fetchFeed, searchVideosByTag } from '../api/videosApi'
 
-export default function FeedGrid({ activeTag = '' }) {
-  const tagSearch = useTagSearch(activeTag)
-  const defaultFeed = useFeed()
+function keepPublishedVideos(items = []) {
+  return items.filter((video) => (
+    video?.id
+    && (!video.status || video.status === 'published')
+    && (!video.visibility || video.visibility === 'public')
+    && video.is_deleted !== true
+  ))
+}
 
-  const { videos, loading, error, refresh, hasMore, loadMore, loadingMore } = activeTag
-    ? {
-        videos: tagSearch.items,
-        loading: tagSearch.loading,
-        loadingMore: tagSearch.loadingMore,
-        error: tagSearch.error,
-        refresh: () => tagSearch.search(activeTag),
-        hasMore: tagSearch.hasMore,
-        loadMore: tagSearch.loadMore,
-      }
-    : defaultFeed
+export default function FeedGrid({ activeTag = '', onSelectVideo }) {
+  const [videos, setVideos] = useState([])
+  const [cursor, setCursor] = useState(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState('')
 
-  if (loading) {
-    return <div className="feed-grid-empty">Đang tải...</div>
+  const fetchPage = useCallback(async (nextCursor = null) => {
+    const request = activeTag
+      ? searchVideosByTag(activeTag, { limit: 12, cursor: nextCursor })
+      : fetchFeed({ limit: 12, cursor: nextCursor })
+    return request
+  }, [activeTag])
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await fetchPage()
+      setVideos(keepPublishedVideos(result.items))
+      setCursor(result.next_cursor || null)
+      setHasMore(Boolean(result.has_more && result.next_cursor))
+    } catch (requestError) {
+      setError(requestError.detail || requestError.message || 'Không tải được danh sách video.')
+      setVideos([])
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchPage])
+
+  useEffect(() => { refresh() }, [refresh])
+
+  async function loadMore() {
+    if (!hasMore || !cursor || loadingMore) return
+    setLoadingMore(true)
+    setError('')
+    try {
+      const result = await fetchPage(cursor)
+      setVideos((current) => [...current, ...keepPublishedVideos(result.items)])
+      setCursor(result.next_cursor || null)
+      setHasMore(Boolean(result.has_more && result.next_cursor))
+    } catch (requestError) {
+      setError(requestError.detail || requestError.message || 'Không tải thêm được video.')
+    } finally {
+      setLoadingMore(false)
+    }
   }
 
-  if (error) {
-    return (
-      <div className="feed-grid-empty">
-        <span>{error}</span>
-        <button type="button" className="button ghost" onClick={refresh}>Thử lại</button>
-      </div>
-    )
-  }
-
-  if (!Array.isArray(videos) || videos.length === 0) {
-    return <div className="feed-grid-empty">Chưa có video nào</div>
-  }
+  if (loading) return <div className="feed-grid-empty">Đang tải video…</div>
+  if (error && videos.length === 0) return <div className="feed-grid-empty"><span>{error}</span><button type="button" className="button ghost" onClick={refresh}>Thử lại</button></div>
+  if (!videos.length) return <div className="feed-grid-empty">Chưa có video nào được đăng</div>
 
   return (
-    <div className="feed-grid-wrapper">
+    <div className="feed-grid-scroll">
       <div className="feed-grid">
         {videos.map((video) => {
           const authorName = video.author?.username || video.owner_name || video.username || 'janus'
+          const title = video.caption || video.original_filename || 'Video không tiêu đề'
           return (
-            <article key={video._loopKey || video.id} className="feed-grid-card">
-              <div className="feed-grid-thumb">
-                {video.thumbnail_url ? (
-                  <img src={video.thumbnail_url} alt={video.caption || 'Video'} loading="lazy" />
-                ) : (
-                  <div className="feed-grid-placeholder" />
-                )}
-                <div className="feed-grid-play">
-                  <Icon name="play" size={14} />
-                </div>
-              </div>
-              <div className="feed-grid-meta">
-                <p className="feed-grid-title">{video.caption || video.original_filename || 'Video không tiêu đề'}</p>
-                <div className="feed-grid-sub" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button
+              key={video._loopKey || video.id}
+              type="button"
+              className="feed-grid-card"
+              onClick={() => onSelectVideo?.(video)}
+              aria-label={`Xem video: ${title}`}
+            >
+              <span className="feed-grid-thumb">
+                {video.thumbnail_url
+                  ? <img src={video.thumbnail_url} alt="" loading="lazy" />
+                  : <span className="feed-grid-placeholder" aria-hidden="true" />}
+                <span className="feed-grid-play"><Icon name="play" size={16} /></span>
+                <span className="feed-grid-duration"><Icon name="play" size={11} />{Number(video.view_count || 0).toLocaleString('vi-VN')} lượt xem</span>
+              </span>
+              <span className="feed-grid-meta">
+                <span className="feed-grid-title">{title}</span>
+                <span className="feed-grid-sub">
                   <span className="feed-grid-user">@{authorName}</span>
-                  {video.like_count !== undefined && (
-                    <span className="feed-grid-likes" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#999' }}>
-                      <Icon name="heart" size={11} /> {video.like_count}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </article>
+                  {video.like_count !== undefined && <span className="feed-grid-likes"><Icon name="heart" size={12} />{video.like_count}</span>}
+                </span>
+                {video.matched_labels?.length > 0 && (
+                  <span className="feed-grid-labels">
+                    {video.matched_labels.map((label) => <span key={label}>#{label}</span>)}
+                  </span>
+                )}
+              </span>
+            </button>
           )
         })}
       </div>
-      {activeTag && hasMore && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
-          <button type="button" className="button ghost" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? 'Đang tải thêm...' : 'Tải thêm video'}
-          </button>
-        </div>
-      )}
+      {error && <p className="feed-grid-inline-error">{error}</p>}
+      {hasMore && <div className="feed-grid-more"><button type="button" className="button ghost" onClick={loadMore} disabled={loadingMore}>{loadingMore ? 'Đang tải…' : 'Tải thêm video'}</button></div>}
     </div>
   )
 }

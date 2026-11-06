@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { EmptyState, ErrorNote, Spinner } from '@/shared/components/Feedback'
 import { useFeed } from '../hooks/useFeed'
@@ -6,13 +6,16 @@ import VideoSlide from './VideoSlide'
 
 /**
  * Feed cuộn dọc toàn màn hình kiểu TikTok (Snap-scrolling).
- * Áp dụng cơ chế Cửa sổ trượt (Sliding Window): Chỉ mount video cho slide đang xem
- * và slide kế tiếp để tiết kiệm băng thông và tài nguyên giải mã media.
+ * Mỗi slide giữ video element để có thể phát thủ công; chỉ slide đang xem được tải trước.
  */
-export default function VideoFeed() {
+export default function VideoFeed({ focusVideo = null }) {
   const [activeIndex, setActiveIndex] = useState(0)
   const { videos, loading, error, refresh } = useFeed(activeIndex)
   const containerRef = useRef(null)
+  const displayVideos = useMemo(() => {
+    if (!focusVideo) return videos
+    return [focusVideo, ...videos.filter((video) => video.id !== focusVideo.id)]
+  }, [focusVideo, videos])
 
   useEffect(() => {
     const container = containerRef.current
@@ -22,38 +25,61 @@ export default function VideoFeed() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            const index = slides.indexOf(entry.target)
-            if (index >= 0) setActiveIndex(index)
-          }
-        })
+        const mostVisible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
+        if (!mostVisible || mostVisible.intersectionRatio < 0.5) return
+        const index = slides.indexOf(mostVisible.target)
+        if (index >= 0) setActiveIndex(index)
       },
       { root: container, threshold: [0.5, 0.75] },
     )
 
     slides.forEach((slide) => observer.observe(slide))
 
-    // Bắt thêm sự kiện scroll để cập nhật tức thời khi người dùng vuốt nhanh
+    // Chọn slide gần tâm vùng xem nhất để tránh lệch activeIndex khi kích thước
+    // viewport thay đổi hoặc trình duyệt phát nhiều sự kiện quan sát cùng lúc.
     const handleScroll = () => {
-      const slideHeight = container.clientHeight
-      if (slideHeight > 0) {
-        const index = Math.round(container.scrollTop / slideHeight)
-        if (index >= 0 && index < slides.length) {
-          setActiveIndex(index)
+      const center = container.getBoundingClientRect().top + container.clientHeight / 2
+      let nearestIndex = 0
+      let nearestDistance = Infinity
+      slides.forEach((slide, index) => {
+        const rect = slide.getBoundingClientRect()
+        const distance = Math.abs(rect.top + rect.height / 2 - center)
+        if (distance < nearestDistance) {
+          nearestDistance = distance
+          nearestIndex = index
         }
-      }
+      })
+      setActiveIndex(nearestIndex)
     }
 
     container.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
 
     return () => {
       observer.disconnect()
       container.removeEventListener('scroll', handleScroll)
     }
-  }, [videos])
+  }, [displayVideos])
 
-  if (loading) {
+  useEffect(() => {
+    if (!focusVideo || displayVideos.length === 0) return undefined
+    const focusedIndex = displayVideos.findIndex((video) => video.id === focusVideo.id)
+    const container = containerRef.current
+    const slide = container?.querySelectorAll('.slide')[focusedIndex]
+    if (!container || !slide || focusedIndex < 0) return undefined
+
+    setActiveIndex(focusedIndex)
+    const frame = window.requestAnimationFrame(() => {
+      const containerTop = container.getBoundingClientRect().top
+      const slideTop = slide.getBoundingClientRect().top
+      container.scrollTop = container.scrollTop + slideTop - containerTop
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [displayVideos, focusVideo])
+
+  if (loading && displayVideos.length === 0) {
     return (
       <div className="feed-center">
         <Spinner label="Đang tải feed" />
@@ -61,7 +87,7 @@ export default function VideoFeed() {
     )
   }
 
-  if (error) {
+  if (error && displayVideos.length === 0) {
     return (
       <div className="feed-center">
         <ErrorNote>{error}</ErrorNote>
@@ -72,7 +98,7 @@ export default function VideoFeed() {
     )
   }
 
-  if (!Array.isArray(videos) || videos.length === 0) {
+  if (!Array.isArray(displayVideos) || displayVideos.length === 0) {
     return (
       <div className="feed-center">
         <EmptyState
@@ -92,13 +118,12 @@ export default function VideoFeed() {
   return (
     <div className="feed-wrapper">
       <div className="feed" ref={containerRef}>
-        {videos.map((video, index) => (
+        {displayVideos.map((video, index) => (
           <VideoSlide
             key={video._loopKey || video.id}
             video={video}
             index={index}
             activeIndex={activeIndex}
-            shouldMountVideo={index === activeIndex || index === activeIndex + 1}
             isActive={index === activeIndex}
             onReported={refresh}
           />

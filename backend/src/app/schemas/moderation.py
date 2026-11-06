@@ -53,6 +53,13 @@ class AppealResponse(BaseModel):
     user_display_name: str | None = None
 
 
+class ModeratorProfileStatsResponse(BaseModel):
+    decisions_count: int = 0
+    rejected_videos_count: int = 0
+    open_reports_count: int = 0
+    handled_appeals_count: int = 0
+
+
 class VideoLabelItem(BaseModel):
     name: str = Field(..., min_length=1, max_length=80)
     confidence: float = Field(..., ge=0.0, le=1.0)

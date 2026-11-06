@@ -1,5 +1,6 @@
 import Icon from '@/shared/components/Icon'
 import { ErrorNote, Spinner } from '@/shared/components/Feedback'
+import { useAuth } from '@/features/auth/AuthContext'
 import { useAiAnalysis } from '../hooks/useAiAnalysis'
 
 const JOB_LABEL = {
@@ -13,7 +14,7 @@ const JOB_LABEL = {
  * Phân tích và cấu trúc hóa chuỗi log / transcript từ pipeline AI.
  * Loại bỏ thông tin đường dẫn nội bộ và bóc tách thành các module trực quan.
  */
-function parseTranscript(text) {
+function parseTranscript(text, includeDiagnostics) {
   if (!text) return []
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
   const items = []
@@ -27,7 +28,9 @@ function parseTranscript(text) {
       .replace(/\s*\((\/[^)\s]+)+\)/gi, '')
       .trim()
 
-    if (clean.includes('[NSFW-Detection]') || clean.includes('phán quyết:')) {
+    if (clean.startsWith('[NSFW-Detection chưa sẵn sàng:')) {
+      continue
+    } else if (clean.includes('[NSFW-Detection]') || clean.includes('phán quyết:')) {
       const decM = clean.match(/phán\s+quyết:\s*([A-Za-z0-9_]+)/i)
       const confM = clean.match(/độ\s+tin\s+cậy:\s*([0-9.]+)/i)
       const ancM = clean.match(/anchor\s+đã\s+đánh\s+giá:\s*(\d+)/i)
@@ -48,6 +51,7 @@ function parseTranscript(text) {
       })
     } else if (clean.includes('[Speech-to-Text]') || clean.includes('transcript âm thanh')) {
       const isPending = clean.includes('chưa được triển khai') || clean.includes('chưa có')
+      if (isPending && !includeDiagnostics) continue
       const content = clean.replace(/^\[Speech-to-Text\]\s*/i, '').trim()
       items.push({
         type: 'stt',
@@ -56,6 +60,7 @@ function parseTranscript(text) {
         content: isPending ? 'Chưa có bản chép lời âm thanh (tính năng đang phát triển)' : content,
       })
     } else if (clean.includes('[Chưa triển khai]')) {
+      if (!includeDiagnostics) continue
       const modM = clean.match(/^\[Chưa triển khai\]\s*([^:]+):\s*(.*)/i)
       if (modM) {
         pendingModules.push({
@@ -65,6 +70,7 @@ function parseTranscript(text) {
         })
       }
     } else {
+      if (!includeDiagnostics) continue
       items.push({
         type: 'general',
         title: 'Thông tin hệ thống',
@@ -84,12 +90,12 @@ function parseTranscript(text) {
   return items
 }
 
-function FormattedTranscript({ transcript }) {
+function FormattedTranscript({ transcript, includeDiagnostics }) {
   if (!transcript) {
     return <p className="ai-transcript-empty">Không có bản chép lời hoặc chi tiết phân tích cho video này.</p>
   }
 
-  const items = parseTranscript(transcript)
+  const items = parseTranscript(transcript, includeDiagnostics)
 
   if (items.length === 0) {
     return <p className="ai-transcript-empty">Không có thông tin phân tích khả dụng.</p>
@@ -196,12 +202,20 @@ function FormattedTranscript({ transcript }) {
  * Panel tự poll cho tới khi job kết thúc (backend chạy job nền).
  */
 export default function AiResultPanel({ videoId, result: propResult, loading: propLoading }) {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const internal = useAiAnalysis(!propResult ? videoId : null)
   const result = propResult !== undefined ? propResult : internal.result
   const loading = propLoading !== undefined ? propLoading : internal.loading
   const error = internal.error
+  const detectorIssue = result?.error_message || result?.transcript?.split(/\r?\n/).find((line) => line.startsWith('[NSFW-Detection chưa sẵn sàng:'))
+  const isTestResult = /Mock transcript for development testing|NSFW-Detection chưa sẵn sàng/i.test(
+    `${result?.transcript || ''}\n${result?.error_message || ''}`,
+  )
 
   if (!videoId) return null
+  // Kết quả mô phỏng và lỗi chẩn đoán chỉ hiển thị trong giao diện quản trị.
+  if (!isAdmin && isTestResult) return null
 
   return (
     <section className="ai-panel" aria-live="polite">
@@ -216,10 +230,22 @@ export default function AiResultPanel({ videoId, result: propResult, loading: pr
         </span>
       </header>
 
-      {error && <ErrorNote>{error}</ErrorNote>}
+      {error && (isAdmin
+        ? <ErrorNote>{error}</ErrorNote>
+        : <p className="ai-user-error" role="status">Chưa thể tải kết quả phân tích lúc này. Vui lòng thử lại sau.</p>)}
 
       {result && (
         <>
+          {isAdmin && (result.job_status === 'failed' || detectorIssue) && (
+            <div className="ai-result-warning" role="alert">
+              <strong>{result.job_status === 'failed' ? 'Phân tích video thất bại' : 'Chưa thể chạy model kiểm duyệt'}</strong>
+              {result.job_status === 'succeeded' && <span>Kết quả bên dưới là dữ liệu mô phỏng, chưa được model thực phân tích.</span>}
+              <span>{detectorIssue?.replace(/^\[NSFW-Detection chưa sẵn sàng:\s*/i, '').replace(/\]$/, '') || 'Không nhận được kết quả phân tích từ hệ thống.'}</span>
+            </div>
+          )}
+          {!isAdmin && result.job_status === 'failed' && (
+            <p className="ai-user-error" role="status">Chưa thể phân tích video lúc này.</p>
+          )}
           <div className="ai-labels">
             {result.labels.length === 0 && <p className="ai-empty">Chưa có nhãn nào được gán cho video này.</p>}
             {result.labels.map((label) => (
@@ -240,7 +266,7 @@ export default function AiResultPanel({ videoId, result: propResult, loading: pr
             <span className="ai-transcript-title">
               <Icon name="spark" size={13} /> CHI TIẾT PHÂN TÍCH & BẢN CHÉP LỜI
             </span>
-            <FormattedTranscript transcript={result.transcript} />
+            <FormattedTranscript transcript={result.transcript} includeDiagnostics={isAdmin} />
           </div>
         </>
       )}
