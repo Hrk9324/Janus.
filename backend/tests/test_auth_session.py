@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-"""Test phiên đăng nhập: đăng xuất, refresh token, khôi phục mật khẩu, hồ sơ."""
-=======
-"""Test phiên đăng nhập: các route đã triển khai và các gap được đánh dấu."""
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
+"""Test phiên đăng nhập, refresh token, khôi phục mật khẩu và hồ sơ."""
 
 
 def test_logout_revokes_current_access_token(client, register):
@@ -139,15 +135,9 @@ def test_profile_update_display_name(client, register):
 def test_profile_password_change_requires_current_password(client, register, login):
     email = "password-change@example.com"
     headers = register(email)
-<<<<<<< HEAD
     refresh_before = client.post(
         "/api/v1/auth/login", json={"email": email, "password": "password123"}
     ).json()["refresh_token"]
-
-    wrong = client.patch(
-        "/api/v1/profile",
-        json={"current_password": "sai-mat-khau-nay", "new_password": "newpassword123"},
-=======
 
     wrong = client.post(
         "/api/v1/profile/change-password",
@@ -156,16 +146,10 @@ def test_profile_password_change_requires_current_password(client, register, log
             "new_password": "newpassword123",
             "confirm_new_password": "newpassword123",
         },
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         headers=headers,
     )
     assert wrong.status_code == 400
 
-<<<<<<< HEAD
-    ok = client.patch(
-        "/api/v1/profile",
-        json={"current_password": "password123", "new_password": "newpassword123"},
-=======
     ok = client.post(
         "/api/v1/profile/change-password",
         json={
@@ -173,7 +157,6 @@ def test_profile_password_change_requires_current_password(client, register, log
             "new_password": "newpassword123",
             "confirm_new_password": "newpassword123",
         },
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
         headers=headers,
     )
     assert ok.status_code == 200
@@ -183,18 +166,11 @@ def test_profile_password_change_requires_current_password(client, register, log
         ).status_code
         == 200
     )
-<<<<<<< HEAD
     # Đổi mật khẩu thu hồi refresh token cũ.
     assert client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_before}).status_code == 401
-=======
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
 
 
-def test_profile_update_requires_at_least_one_field(client, register):
+def test_profile_update_accepts_empty_payload(client, register):
     headers = register("empty-update@example.com")
-<<<<<<< HEAD
-    assert client.patch("/api/v1/profile", json={}, headers=headers).status_code == 422
-=======
     assert client.patch("/api/v1/profile", json={}, headers=headers).status_code == 200
->>>>>>> 0dcf2c46a0f557080b0fcca8ac5384151d871ffd
     assert client.patch("/api/v1/profile", json={"display_name": "X"}).status_code == 401

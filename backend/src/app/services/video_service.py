@@ -110,18 +110,40 @@ def list_published_feed(
     if cursor is not None:
         conditions.append(Video.created_at < cursor)
 
-    videos = list(
-        db.scalars(
-            select(Video)
-            .options(selectinload(Video.owner))
-            .where(*conditions)
-            .order_by(Video.created_at.desc())
-            .limit(limit + 1)
+    storage = get_storage_service()
+    batch_size = max(limit + 1, 20)
+    scan_cursor = cursor
+    videos: list[Video] = []
+    exhausted = False
+    while len(videos) <= limit and not exhausted:
+        batch_conditions = list(conditions)
+        if scan_cursor is not None:
+            batch_conditions.append(Video.created_at < scan_cursor)
+        batch = list(
+            db.scalars(
+                select(Video)
+                .options(selectinload(Video.owner))
+                .where(*batch_conditions)
+                .order_by(Video.created_at.desc())
+                .limit(batch_size)
+            )
         )
-    )
+        if not batch:
+            exhausted = True
+            break
+
+        scan_cursor = batch[-1].created_at
+        if len(batch) < batch_size:
+            exhausted = True
+        videos.extend(
+            video
+            for video in batch
+            if storage.is_s3
+            or storage.is_existing_local_path(video.storage_path)
+        )
+
     has_more = len(videos) > limit
     items = videos[:limit]
-    storage = get_storage_service()
     feed_items = [
         FeedItem(
             id=video.id,

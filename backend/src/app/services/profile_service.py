@@ -1,14 +1,15 @@
 """Nghiệp vụ profile, discriminator và đổi mật khẩu."""
 
 import secrets
+from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
 from app.exceptions import ConflictError, InvalidInputError
-from app.models import User
+from app.models import RefreshToken, User
 from app.schemas import ChangePasswordRequest, ProfileUpdate
 
 MAX_DISCRIMINATOR = 9999
@@ -72,5 +73,14 @@ def change_password(
         raise InvalidInputError("Mật khẩu hiện tại không chính xác")
     if verify_password(payload.new_password, user.password_hash):
         raise InvalidInputError("Mật khẩu mới không được trùng mật khẩu cũ")
+    now = datetime.now(UTC)
     user.password_hash = hash_password(payload.new_password)
+    db.execute(
+        update(RefreshToken)
+        .where(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked_at.is_(None),
+        )
+        .values(revoked_at=now)
+    )
     db.commit()

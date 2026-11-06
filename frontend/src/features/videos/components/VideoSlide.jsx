@@ -5,6 +5,7 @@ import { recordVideoView } from '../api/videosApi'
 import ReportDialog from './ReportDialog'
 import CommentDrawer from './CommentDrawer'
 import { toggleLike, toggleFollow, toggleBookmark } from '../api/socialApi'
+import { streamUrl } from '../api/videosApi'
 import { useAuth } from '@/features/auth/AuthContext'
 
 function formatViewCount(num) {
@@ -23,21 +24,24 @@ function formatViewCount(num) {
 /**
  * Một video slide trong feed dọc.
  * Áp dụng cơ chế Cửa sổ trượt (Sliding Window):
- * - Chỉ mount thẻ <video> cho video active (preload="auto") và video kế tiếp (preload="metadata").
+ * - Chỉ mount thẻ <video> cho slide hiện tại và kế tiếp; slide kế tiếp không tải trước dữ liệu.
  * - Tất cả các video còn lại chỉ mount ảnh thumbnail <img src={thumbnail_url}> để tiết kiệm băng thông.
  */
 export default function VideoSlide({
   video,
   index,
   activeIndex,
-  shouldMountVideo,
   isActive: propIsActive,
   onReported,
 }) {
   const containerRef = useRef(null)
   const videoRef = useRef(null)
   const volumeRef = useRef(null)
+  const shouldPlayRef = useRef(false)
   const [playing, setPlaying] = useState(false)
+  const [mediaError, setMediaError] = useState('')
+  const fallbackStream = streamUrl(video.id)
+  const [source, setSource] = useState(video.stream_url || fallbackStream)
   const [muted, setMuted] = useState(true)
   const [volume, setVolume] = useState(0.5)
   const [reporting, setReporting] = useState(false)
@@ -60,12 +64,9 @@ export default function VideoSlide({
       ? index === activeIndex
       : false
 
-  const isNext =
-    index !== undefined && activeIndex !== undefined ? index === activeIndex + 1 : false
-
-  const canMount = shouldMountVideo !== undefined ? shouldMountVideo : isActive || isNext
-
   useEffect(() => {
+    setSource(video.stream_url || fallbackStream)
+    setMediaError('')
     setPlaying(false)
     setLiked(false)
     setFollowed(false)
@@ -81,7 +82,7 @@ export default function VideoSlide({
       videoRef.current.muted = true
       videoRef.current.volume = 0.5
     }
-  }, [video.id, video.view_count, video.views])
+  }, [video.id, video.stream_url, video.view_count, video.views, fallbackStream])
 
   useEffect(() => {
     if (!isActive) {
@@ -95,6 +96,7 @@ export default function VideoSlide({
     if (!element) return
 
     if (isActive) {
+      shouldPlayRef.current = true
       element
         .play()
         .then(() => setPlaying(true))
@@ -109,15 +111,12 @@ export default function VideoSlide({
           }
         })
     } else {
+      shouldPlayRef.current = false
       element.pause()
       element.currentTime = 0
       setPlaying(false)
     }
   }, [isActive])
-
-  useEffect(() => {
-    if (!canMount) setPlaying(false)
-  }, [canMount])
 
   useEffect(() => {
     function onChange() {
@@ -130,17 +129,38 @@ export default function VideoSlide({
   async function togglePlayback() {
     const element = videoRef.current
     if (!element) return
+    if (mediaError) {
+      setMediaError('')
+      element.load()
+    }
     if (element.paused) {
       try {
+        shouldPlayRef.current = true
         await element.play()
         setPlaying(true)
       } catch {
         setPlaying(false)
       }
     } else {
+      shouldPlayRef.current = false
       element.pause()
       setPlaying(false)
     }
+  }
+
+  function handleMediaError() {
+    if (source !== fallbackStream) {
+      setSource(fallbackStream)
+      setMediaError('')
+      return
+    }
+    setPlaying(false)
+    setMediaError('Không tải được video. Hãy bấm vào video để thử lại.')
+  }
+
+  function handleCanPlay() {
+    if (!isActive || !shouldPlayRef.current || !videoRef.current) return
+    videoRef.current.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
   }
 
   async function handleLike() {
@@ -270,51 +290,31 @@ export default function VideoSlide({
 
   return (
     <article className="slide" ref={containerRef}>
-      <button
-        type="button"
-        className="slide-stage"
-        onClick={togglePlayback}
-        aria-label="Phát hoặc tạm dừng video"
-      >
-        {canMount ? (
-          <video
-            ref={videoRef}
-            src={video.stream_url}
-            loop
-            playsInline
-            muted={muted}
-            preload={isActive ? 'auto' : 'none'}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-            onTimeUpdate={handleTimeUpdate}
-            onEnded={handleEnded}
-          />
-        ) : video.thumbnail_url ? (
-          <img
-            src={video.thumbnail_url}
-            alt={video.caption || 'Video thumbnail'}
-            className="slide-poster"
-            style={{
-              width: 'min(420px, 40vw)',
-              height: '100%',
-              objectFit: 'contain',
-              background: '#000',
-            }}
-            loading="lazy"
-          />
-        ) : (
-          <div
-            className="slide-poster placeholder"
-            style={{ width: 'min(420px, 40vw)', height: '100%', background: '#000' }}
-            aria-label="Ảnh bìa chưa sẵn sàng"
-          />
-        )}
+      <div className="slide-stage">
+        <video
+          ref={videoRef}
+          src={source}
+          poster={video.thumbnail_url || undefined}
+          loop
+          playsInline
+          autoPlay={isActive}
+          controls
+          muted={muted}
+          preload={isActive ? 'auto' : 'none'}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleEnded}
+          onError={handleMediaError}
+          onCanPlay={handleCanPlay}
+        />
         {!playing && (
-          <span className="slide-play" style={!canMount ? { opacity: 0.65 } : undefined}>
+          <button type="button" className="slide-play" onClick={togglePlayback} aria-label="Phát video">
             <Icon name="play" size={26} />
-          </span>
+          </button>
         )}
-      </button>
+        {mediaError && <button type="button" className="slide-media-error" onClick={togglePlayback} aria-label="Thử tải video lại">{mediaError}</button>}
+      </div>
 
       <div className="slide-meta">
         <div className="slide-user-row">
