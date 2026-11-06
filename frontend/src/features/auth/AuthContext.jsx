@@ -24,9 +24,11 @@ export function AuthProvider({ children }) {
       .then((profile) => {
         if (!cancelled) setUser(profile)
       })
-      .catch(() => {
+      .catch((requestError) => {
         if (!cancelled) {
-          setToken(null)
+          // Chỉ xóa phiên khi backend xác nhận token không hợp lệ/hết hạn.
+          // Lỗi 500 hoặc mất kết nối tạm thời không nên làm mất phiên đăng nhập.
+          if (requestError.status === 401) setToken(null)
           setUser(null)
         }
       })
