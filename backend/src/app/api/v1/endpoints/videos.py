@@ -35,6 +35,7 @@ from app.services import (
     view_tracking_service,
 )
 from app.services.storage_service import get_storage_service
+from app.services.thumbnail_service import extract_first_frame
 
 router = APIRouter(tags=["videos"])
 
@@ -185,14 +186,37 @@ def video_thumbnail(
     storage = get_storage_service()
     if storage.is_s3:
         thumbnail_url = storage.get_thumbnail_url(f"thumbnails/{video_id}.jpg")
-        if not thumbnail_url:
-            raise HTTPException(status_code=404, detail="Chưa có ảnh bìa")
+        if thumbnail_url.startswith("/api/v1/videos/"):
+            try:
+                with storage.download_to_temp(video.storage_path) as video_path:
+                    thumbnail = extract_first_frame(video_path)
+                storage.upload_thumbnail(f"thumbnails/{video_id}.jpg", thumbnail)
+                thumbnail_url = storage.get_thumbnail_url(f"thumbnails/{video_id}.jpg")
+            except Exception as exc:
+                raise HTTPException(status_code=404, detail="Không thể tạo ảnh xem trước cho video này") from exc
         return RedirectResponse(thumbnail_url)
-    paths = [Path(get_settings().upload_dir) / f"thumbnails/{video_id}.{extension}" for extension in ("jpg", "png", "webp")]
+    paths = [
+        Path(get_settings().upload_dir)
+        / f"thumbnails/{video_id}.{extension}"
+        for extension in ("jpg", "png", "webp")
+    ]
     path = next((candidate for candidate in paths if candidate.is_file()), None)
     if path is None:
-        raise HTTPException(status_code=404, detail="Chưa có ảnh bìa")
-    return FileResponse(path, media_type=f"image/{path.suffix.lstrip('.')}", headers={"Cache-Control": "private, max-age=300"})
+        try:
+            with storage.download_to_temp(video.storage_path) as video_path:
+                thumbnail = extract_first_frame(video_path)
+            storage.upload_thumbnail(f"thumbnails/{video_id}.jpg", thumbnail)
+            path = paths[0]
+        except Exception as exc:
+            raise HTTPException(
+                status_code=404,
+                detail="Không thể tạo ảnh xem trước cho video này",
+            ) from exc
+    return FileResponse(
+        path,
+        media_type=f"image/{path.suffix.lstrip('.')}",
+        headers={"Cache-Control": "private, max-age=300"},
+    )
 
 
 @router.put("/videos/{video_id}/thumbnail", response_model=None)
@@ -210,7 +234,11 @@ def update_video_thumbnail(
     content = file.file.read(5 * 1024 * 1024 + 1)
     if not content or len(content) > 5 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Ảnh bìa phải nhỏ hơn 5 MB")
-    extension = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}[file.content_type]
+    extension = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+    }[file.content_type]
     signatures = {
         "jpg": content.startswith(b"\xff\xd8\xff"),
         "png": content.startswith(b"\x89PNG\r\n\x1a\n"),
@@ -218,8 +246,13 @@ def update_video_thumbnail(
     }
     if not signatures[extension]:
         raise HTTPException(status_code=400, detail="Tệp tải lên không đúng định dạng ảnh")
-    get_storage_service().upload_thumbnail(f"thumbnails/{video_id}.{extension}", content, file.content_type)
-    return {"thumbnail_url": f"/api/v1/videos/{video_id}/thumbnail?v={datetime.now().timestamp()}"}
+    storage = get_storage_service()
+    storage.upload_thumbnail(f"thumbnails/{video_id}.{extension}", content, file.content_type)
+    for old_extension in {"jpg", "png", "webp"} - {extension}:
+        storage.delete_thumbnail(f"thumbnails/{video_id}.{old_extension}")
+    return {
+        "thumbnail_url": f"/api/v1/videos/{video_id}/thumbnail?v={datetime.now().timestamp()}"
+    }
 
 
 @router.delete("/videos/{video_id}", status_code=status.HTTP_204_NO_CONTENT)

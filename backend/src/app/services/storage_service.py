@@ -52,6 +52,15 @@ class StorageService:
     ) -> str:
         return self.upload_file(file_key, content, content_type)
 
+    def delete_thumbnail(self, file_key: str) -> None:
+        if self.is_s3:
+            self._client.delete_object(
+                Bucket=self.settings.s3_bucket_name,
+                Key=file_key,
+            )
+            return
+        (Path(self.settings.upload_dir) / file_key).unlink(missing_ok=True)
+
     def delete_file(self, file_key: str) -> None:
         if self.is_s3 and not self.is_existing_local_path(file_key):
             self._client.delete_object(Bucket=self.settings.s3_bucket_name, Key=file_key)
@@ -106,12 +115,12 @@ class StorageService:
                         continue
                     raise
                 return self.get_stream_url(key, public=True)
-            return None
+            return f"/api/v1/videos/{Path(file_key).stem}/thumbnail"
         for key in thumbnail_keys:
             path = Path(self.settings.upload_dir) / key
             if path.is_file():
                 return f"/api/v1/videos/{path.stem}/thumbnail?v={path.stat().st_mtime_ns}"
-        return None
+        return f"/api/v1/videos/{Path(file_key).stem}/thumbnail"
 
     @staticmethod
     def is_existing_local_path(file_key: str) -> bool:
