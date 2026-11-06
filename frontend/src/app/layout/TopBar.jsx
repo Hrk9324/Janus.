@@ -16,6 +16,7 @@ const TITLES = {
 export default function TopBar() {
   const { pathname } = useLocation()
   const { user, isAuthenticated } = useAuth()
+  const roleLabel = user?.role === 'moderator' ? 'Kiểm duyệt viên' : user?.role === 'admin' ? 'Quản trị viên' : null
 
   return (
     <header className="topbar">
@@ -26,15 +27,15 @@ export default function TopBar() {
       </div>
 
       <div className="topbar-actions">
-        {isAuthenticated && (
+        {isAuthenticated && roleLabel && (
           <span className="role-pill" title="Vai trò hiện tại">
             <i />
-            {user.role}
+            {roleLabel}
           </span>
         )}
         {isAuthenticated ? (
           <Link to="/profile" className="avatar" aria-label="Hồ sơ">
-            {user.display_name.slice(0, 2).toUpperCase()}
+            {user.avatar_url ? <img src={user.avatar_url} alt="" /> : user.display_name.slice(0, 2).toUpperCase()}
           </Link>
         ) : (
           <Link to="/login" className="button ghost">

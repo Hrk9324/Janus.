@@ -63,7 +63,7 @@ export default function FeedGrid({ activeTag = '', onSelectVideo }) {
 
   if (loading) return <div className="feed-grid-empty">Đang tải video…</div>
   if (error && videos.length === 0) return <div className="feed-grid-empty"><span>{error}</span><button type="button" className="button ghost" onClick={refresh}>Thử lại</button></div>
-  if (!videos.length) return <div className="feed-grid-empty">Chưa có video nào được đăng</div>
+  if (!videos.length) return <div className="feed-grid-empty">{activeTag ? `Không tìm thấy video phù hợp với “${activeTag}”.` : 'Chưa có video nào được đăng'}</div>
 
   return (
     <div className="feed-grid-scroll">

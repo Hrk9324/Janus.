@@ -624,7 +624,8 @@
 .feed-page {
   flex: 0 0 auto;
   min-height: 0;
-  height: calc(100dvh - var(--topbar-height));
+  height: 100%;
+  flex: 1 1 0%;
   width: 100%;
 }
 
@@ -690,7 +691,7 @@
 
 
 @media (max-width: 900px) {
-  .feed-page { height: calc(100dvh - 54px - 64px); min-height: 0; }
+  .feed-page { height: 100%; min-height: 0; }
   .feed, .feed-center, .slide { height: 100%; }
   .slide-stage video { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
   .feed-grid-scroll { padding: 14px 14px 24px; }

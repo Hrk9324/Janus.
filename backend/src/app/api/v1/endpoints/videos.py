@@ -1,7 +1,8 @@
 from datetime import datetime
+from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Query, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -33,6 +34,7 @@ from app.services import (
     video_service,
     view_tracking_service,
 )
+from app.services.storage_service import get_storage_service
 
 router = APIRouter(tags=["videos"])
 
@@ -164,6 +166,60 @@ def stream_video(
         filename=target.name,
         headers={"Cache-Control": "private, max-age=60"},
     )
+
+
+@router.get("/videos/{video_id}/thumbnail", response_model=None)
+def video_thumbnail(
+    video_id: UUID,
+    user: User | None = Depends(optional_user),
+    db: Session = Depends(get_db),
+) -> FileResponse | RedirectResponse:
+    video = db.get(Video, video_id)
+    if video is None or video.is_deleted:
+        raise HTTPException(status_code=404, detail="Không tìm thấy ảnh bìa")
+    is_public = video.status.value == "published" and video.visibility.value == "public"
+    is_owner = user is not None and video.owner_id == user.id
+    is_staff = user is not None and user.role.value in {"moderator", "admin"}
+    if not (is_public or is_owner or is_staff):
+        raise HTTPException(status_code=404, detail="Không tìm thấy ảnh bìa")
+    storage = get_storage_service()
+    if storage.is_s3:
+        thumbnail_url = storage.get_thumbnail_url(f"thumbnails/{video_id}.jpg")
+        if not thumbnail_url:
+            raise HTTPException(status_code=404, detail="Chưa có ảnh bìa")
+        return RedirectResponse(thumbnail_url)
+    paths = [Path(get_settings().upload_dir) / f"thumbnails/{video_id}.{extension}" for extension in ("jpg", "png", "webp")]
+    path = next((candidate for candidate in paths if candidate.is_file()), None)
+    if path is None:
+        raise HTTPException(status_code=404, detail="Chưa có ảnh bìa")
+    return FileResponse(path, media_type=f"image/{path.suffix.lstrip('.')}", headers={"Cache-Control": "private, max-age=300"})
+
+
+@router.put("/videos/{video_id}/thumbnail", response_model=None)
+def update_video_thumbnail(
+    video_id: UUID,
+    file: UploadFile = File(...),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    video = db.get(Video, video_id)
+    if video is None or video.is_deleted or video.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Không tìm thấy video")
+    if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
+        raise HTTPException(status_code=400, detail="Ảnh bìa phải là JPG, PNG hoặc WebP")
+    content = file.file.read(5 * 1024 * 1024 + 1)
+    if not content or len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Ảnh bìa phải nhỏ hơn 5 MB")
+    extension = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}[file.content_type]
+    signatures = {
+        "jpg": content.startswith(b"\xff\xd8\xff"),
+        "png": content.startswith(b"\x89PNG\r\n\x1a\n"),
+        "webp": content.startswith(b"RIFF") and content[8:12] == b"WEBP",
+    }
+    if not signatures[extension]:
+        raise HTTPException(status_code=400, detail="Tệp tải lên không đúng định dạng ảnh")
+    get_storage_service().upload_thumbnail(f"thumbnails/{video_id}.{extension}", content, file.content_type)
+    return {"thumbnail_url": f"/api/v1/videos/{video_id}/thumbnail?v={datetime.now().timestamp()}"}
 
 
 @router.delete("/videos/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
