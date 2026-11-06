@@ -21,7 +21,7 @@ export default function FeedPage() {
       <div className="feed-page">
         <div className="feed-page-header">
           <div className="feed-tabs">
-            <span className="feed-tab active">#{tag}</span>
+            <span className="feed-tab active">Kết quả: {tag}</span>
           </div>
           {focusedVideo ? (
             <button type="button" className="button ghost small" onClick={() => setFocusedVideo(null)}>

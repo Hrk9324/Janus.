@@ -26,6 +26,12 @@ export function updateVideo(videoId, payload) {
   return apiFetch(`/v1/videos/${videoId}`, { method: 'PATCH', body: payload })
 }
 
+export function updateVideoThumbnail(videoId, file) {
+  const form = new FormData()
+  form.append('file', file)
+  return apiFetch(`/v1/videos/${videoId}/thumbnail`, { method: 'PUT', body: form })
+}
+
 export function searchVideosByTag(tag, { limit = 12, cursor } = {}) {
   const query = new URLSearchParams({ tag, limit: String(limit) })
   if (cursor) query.set('cursor', cursor)
