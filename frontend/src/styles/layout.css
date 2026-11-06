@@ -182,6 +182,33 @@
   gap: 10px;
 }
 
+.topbar-feed-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .045);
+}
+
+.topbar-feed-switch button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.topbar-feed-switch button.active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
 .role-pill {
   display: flex;
   align-items: center;
@@ -286,6 +313,11 @@
   .page {
     padding: 22px 14px 36px;
   }
+}
+
+@media (max-width: 560px) {
+  .topbar-actions { gap: 6px; }
+  .topbar-feed-switch button { min-height: 28px; padding-inline: 7px; font-size: 10px; }
 }
 
 
