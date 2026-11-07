@@ -178,35 +178,33 @@ def video_thumbnail(
     video = db.get(Video, video_id)
     if video is None or video.is_deleted:
         raise HTTPException(status_code=404, detail="Không tìm thấy ảnh bìa")
-    is_public = video.status.value == "published" and video.visibility.value == "public"
+    video_status = getattr(video.status, "value", video.status)
+    video_visibility = getattr(video.visibility, "value", video.visibility)
+    is_public = video_status == "published" and video_visibility == "public"
     is_owner = user is not None and video.owner_id == user.id
-    is_staff = user is not None and user.role.value in {"moderator", "admin"}
+    user_role = getattr(user.role, "value", user.role) if user is not None else None
+    is_staff = user_role in {"moderator", "admin"}
     if not (is_public or is_owner or is_staff):
         raise HTTPException(status_code=404, detail="Không tìm thấy ảnh bìa")
     storage = get_storage_service()
     if storage.is_s3:
-        thumbnail_url = storage.get_thumbnail_url(f"thumbnails/{video_id}.jpg")
+        thumbnail_key = f"thumbnails/first-frame/{video_id}.jpg"
+        thumbnail_url = storage.get_thumbnail_url(thumbnail_key)
         if thumbnail_url.startswith("/api/v1/videos/"):
             try:
                 with storage.download_to_temp(video.storage_path) as video_path:
                     thumbnail = extract_first_frame(video_path)
-                storage.upload_thumbnail(f"thumbnails/{video_id}.jpg", thumbnail)
-                thumbnail_url = storage.get_thumbnail_url(f"thumbnails/{video_id}.jpg")
+                storage.upload_thumbnail(thumbnail_key, thumbnail)
+                thumbnail_url = storage.get_thumbnail_url(thumbnail_key)
             except Exception as exc:
                 raise HTTPException(status_code=404, detail="Không thể tạo ảnh xem trước cho video này") from exc
         return RedirectResponse(thumbnail_url)
-    paths = [
-        Path(get_settings().upload_dir)
-        / f"thumbnails/{video_id}.{extension}"
-        for extension in ("jpg", "png", "webp")
-    ]
-    path = next((candidate for candidate in paths if candidate.is_file()), None)
-    if path is None:
+    path = Path(get_settings().upload_dir) / f"thumbnails/first-frame/{video_id}.jpg"
+    if not path.is_file():
         try:
             with storage.download_to_temp(video.storage_path) as video_path:
                 thumbnail = extract_first_frame(video_path)
-            storage.upload_thumbnail(f"thumbnails/{video_id}.jpg", thumbnail)
-            path = paths[0]
+            storage.upload_thumbnail(f"thumbnails/first-frame/{video_id}.jpg", thumbnail)
         except Exception as exc:
             raise HTTPException(
                 status_code=404,
@@ -217,42 +215,6 @@ def video_thumbnail(
         media_type=f"image/{path.suffix.lstrip('.')}",
         headers={"Cache-Control": "private, max-age=300"},
     )
-
-
-@router.put("/videos/{video_id}/thumbnail", response_model=None)
-def update_video_thumbnail(
-    video_id: UUID,
-    file: UploadFile = File(...),
-    user: User = Depends(current_user),
-    db: Session = Depends(get_db),
-) -> dict[str, str]:
-    video = db.get(Video, video_id)
-    if video is None or video.is_deleted or video.owner_id != user.id:
-        raise HTTPException(status_code=404, detail="Không tìm thấy video")
-    if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
-        raise HTTPException(status_code=400, detail="Ảnh bìa phải là JPG, PNG hoặc WebP")
-    content = file.file.read(5 * 1024 * 1024 + 1)
-    if not content or len(content) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Ảnh bìa phải nhỏ hơn 5 MB")
-    extension = {
-        "image/jpeg": "jpg",
-        "image/png": "png",
-        "image/webp": "webp",
-    }[file.content_type]
-    signatures = {
-        "jpg": content.startswith(b"\xff\xd8\xff"),
-        "png": content.startswith(b"\x89PNG\r\n\x1a\n"),
-        "webp": content.startswith(b"RIFF") and content[8:12] == b"WEBP",
-    }
-    if not signatures[extension]:
-        raise HTTPException(status_code=400, detail="Tệp tải lên không đúng định dạng ảnh")
-    storage = get_storage_service()
-    storage.upload_thumbnail(f"thumbnails/{video_id}.{extension}", content, file.content_type)
-    for old_extension in {"jpg", "png", "webp"} - {extension}:
-        storage.delete_thumbnail(f"thumbnails/{video_id}.{old_extension}")
-    return {
-        "thumbnail_url": f"/api/v1/videos/{video_id}/thumbnail?v={datetime.now().timestamp()}"
-    }
 
 
 @router.delete("/videos/{video_id}", status_code=status.HTTP_204_NO_CONTENT)

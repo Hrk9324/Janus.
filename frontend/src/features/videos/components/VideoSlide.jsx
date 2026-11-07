@@ -5,7 +5,7 @@ import { recordVideoView } from '../api/videosApi'
 import ReportDialog from './ReportDialog'
 import CommentDrawer from './CommentDrawer'
 import { toggleLike, toggleFollow, toggleBookmark } from '../api/socialApi'
-import { streamUrl } from '../api/videosApi'
+import { streamUrl, thumbnailUrl } from '../api/videosApi'
 import { useAuth } from '@/features/auth/AuthContext'
 
 function formatViewCount(num) {
@@ -295,7 +295,7 @@ export default function VideoSlide({
           <video
             ref={videoRef}
             src={source}
-            poster={video.thumbnail_url || undefined}
+            poster={thumbnailUrl(video.id)}
             loop
             playsInline
             autoPlay={isActive}

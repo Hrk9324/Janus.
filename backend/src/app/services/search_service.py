@@ -101,7 +101,9 @@ def search_published_videos_by_tag(
         SearchTagItem(
             id=video.id,
             caption=video.caption,
-            thumbnail_url=storage.get_thumbnail_url(f"thumbnails/{video.id}.jpg"),
+            thumbnail_url=storage.get_thumbnail_url(
+                f"thumbnails/first-frame/{video.id}.jpg"
+            ),
             stream_url=(
                 storage.get_stream_url(video.storage_path, public=True)
                 if storage.is_s3

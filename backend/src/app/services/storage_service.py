@@ -52,15 +52,6 @@ class StorageService:
     ) -> str:
         return self.upload_file(file_key, content, content_type)
 
-    def delete_thumbnail(self, file_key: str) -> None:
-        if self.is_s3:
-            self._client.delete_object(
-                Bucket=self.settings.s3_bucket_name,
-                Key=file_key,
-            )
-            return
-        (Path(self.settings.upload_dir) / file_key).unlink(missing_ok=True)
-
     def delete_file(self, file_key: str) -> None:
         if self.is_s3 and not self.is_existing_local_path(file_key):
             self._client.delete_object(Bucket=self.settings.s3_bucket_name, Key=file_key)

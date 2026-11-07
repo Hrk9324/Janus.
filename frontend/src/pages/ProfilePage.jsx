@@ -6,7 +6,7 @@ import { EmptyState, ErrorNote, Spinner, StatusBadge } from '@/shared/components
 import { VIDEO_STATUS_LABEL, formatBytes, formatDateTime } from '@/shared/lib/format'
 import { useAuth } from '@/features/auth/AuthContext'
 import AiResultPanel from '@/features/videos/components/AiResultPanel'
-import { deleteVideo, fetchMyVideos, streamUrl } from '@/features/videos/api/videosApi'
+import { deleteVideo, fetchMyVideos, streamUrl, thumbnailUrl } from '@/features/videos/api/videosApi'
 import { fetchMyModerationStats } from '@/features/moderation/api/moderationApi'
 import '@/styles/profile.css'
 import '@/styles/profile-editor.css'
@@ -232,7 +232,7 @@ export default function ProfilePage() {
                   <li key={video.id} className={video.id === selectedId ? 'video-row active' : 'video-row'}>
                     <button type="button" className="video-row-main" onClick={() => setSelectedId(video.id)}>
                       <span className="video-row-thumb">
-                        <video src={streamUrl(video.id)} poster={video.thumbnail_url || undefined} muted playsInline preload="none" />
+                        <video src={streamUrl(video.id)} poster={thumbnailUrl(video.id)} muted playsInline preload="none" />
                       </span>
                       <span className="video-row-copy">
                         <strong>{video.caption || video.original_filename}</strong>
