@@ -398,7 +398,7 @@ export default function VideoSlide({
           <Icon name="play" size={12} />
           <span>{formatViewCount(currentViews)} lượt xem</span>
         </div>
-        <p className="slide-caption">{video.caption || video.original_filename}</p>
+        <p className="slide-caption">{video.caption || 'Không có mô tả'}</p>
       </div>
 
       <div className="slide-actions">

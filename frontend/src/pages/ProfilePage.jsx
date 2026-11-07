@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
-import { EmptyState, ErrorNote, Spinner, StatusBadge } from '@/shared/components/Feedback'
+import { EmptyState, ErrorNote, Modal, Spinner, StatusBadge } from '@/shared/components/Feedback'
 import { VIDEO_STATUS_LABEL, formatBytes, formatDateTime } from '@/shared/lib/format'
 import { useAuth } from '@/features/auth/AuthContext'
 import AiResultPanel from '@/features/videos/components/AiResultPanel'
@@ -29,9 +29,16 @@ export default function ProfilePage() {
   const [busyId, setBusyId] = useState(null)
   const [moderationStats, setModerationStats] = useState(null)
   const [moderationStatsError, setModerationStatsError] = useState('')
-  const [profileDraft, setProfileDraft] = useState({ display_name: user.display_name, bio: user.bio || '', avatar_url: user.avatar_url || '' })
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [profileDraft, setProfileDraft] = useState({
+    display_name: user?.display_name ?? '',
+    bio: user?.bio ?? '',
+    avatar_url: user?.avatar_url ?? '',
+  })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
+  const avatarInputRef = useRef(null)
 
   async function saveProfile(event) {
     event.preventDefault()
@@ -40,11 +47,29 @@ export default function ProfilePage() {
     try {
       await updateProfile({ ...profileDraft, avatar_url: profileDraft.avatar_url.trim() || null })
       setProfileMessage('Thông tin cá nhân đã được cập nhật.')
+      setEditOpen(false)
     } catch (requestError) {
       setProfileMessage(requestError.detail || requestError.message || 'Chưa thể cập nhật hồ sơ.')
     } finally {
       setProfileSaving(false)
     }
+  }
+
+  function openEdit() {
+    setProfileDraft({
+      display_name: user?.display_name ?? '',
+      bio: user?.bio ?? '',
+      avatar_url: user?.avatar_url ?? '',
+    })
+    setProfileMessage('')
+    setEditOpen(true)
+  }
+
+  function handleAvatarSelect(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setProfileDraft((draft) => ({ ...draft, avatar_url: url }))
   }
 
   useEffect(() => {
@@ -123,12 +148,33 @@ export default function ProfilePage() {
   return (
     <div className="page">
       <div className="profile-head">
-        <span className="avatar avatar-lg">{user.avatar_url ? <img src={user.avatar_url} alt="" /> : user.display_name.slice(0, 2).toUpperCase()}</span>
+        <div className="profile-avatar-wrap">
+          <span className="avatar avatar-lg">
+            {user.avatar_url ? <img src={user.avatar_url} alt="" /> : user.display_name.slice(0, 2).toUpperCase()}
+          </span>
+          <button
+            type="button"
+            className="avatar-edit"
+            title="Chỉnh sửa ảnh đại diện"
+            onClick={openEdit}
+            aria-label="Chỉnh sửa ảnh đại diện"
+          >
+            <Icon name="edit" size={14} />
+          </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={handleAvatarSelect}
+          />
+        </div>
         <div>
-          <h1>{user.display_name}</h1>
-          <p className="page-sub">
-            {user.email} · vai trò <strong>{user.role === 'moderator' ? 'Kiểm duyệt viên' : user.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}</strong>
-          </p>
+          <h1>
+            {user.display_name}
+            <span className="profile-id">#{user.id ?? ''}</span>
+          </h1>
+          <p className="page-sub">{user.email}</p>
         </div>
         <div className="stat-row">
           <button
@@ -166,31 +212,119 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <form className="profile-edit-panel" onSubmit={saveProfile}>
+      <section className="profile-intro">
         <div className="profile-edit-heading">
-          <div><span className="overline">HỒ SƠ CỦA BẠN</span><h2>Thông tin cá nhân</h2></div>
-          {profileDraft.avatar_url && <img className="profile-avatar-preview" src={profileDraft.avatar_url} alt="Ảnh đại diện xem trước" />}
+          <div>
+            <span className="overline">GIỚI THIỆU</span>
+            <h2>Giới thiệu</h2>
+          </div>
         </div>
-        <div className="profile-edit-fields">
-          <label className="field"><span>Tên hiển thị</span><input className="text-input" value={profileDraft.display_name} maxLength={120} required onChange={(event) => setProfileDraft((draft) => ({ ...draft, display_name: event.target.value }))} /></label>
-          <label className="field"><span>Liên kết ảnh đại diện</span><input className="text-input" type="url" placeholder="https://…" value={profileDraft.avatar_url} onChange={(event) => setProfileDraft((draft) => ({ ...draft, avatar_url: event.target.value }))} /></label>
-          <label className="field profile-bio-field"><span>Giới thiệu</span><textarea className="text-input" rows={3} maxLength={500} value={profileDraft.bio} onChange={(event) => setProfileDraft((draft) => ({ ...draft, bio: event.target.value }))} placeholder="Một vài dòng về bạn" /></label>
+        <div className="profile-intro-body">
+          <p>{user.bio || 'Chưa có giới thiệu.'}</p>
         </div>
-        <div className="profile-edit-footer"><span aria-live="polite">{profileMessage}</span><button className="button primary" type="submit" disabled={profileSaving}>{profileSaving ? 'Đang lưu…' : 'Lưu hồ sơ'}</button></div>
-      </form>
+        <button className="button primary" type="button" onClick={openEdit}>
+          Chỉnh sửa thông tin cá nhân
+        </button>
+      </section>
 
-      <ErrorNote>{error}</ErrorNote>
+      {editOpen && (
+        <Modal title="Chỉnh sửa thông tin cá nhân" onClose={() => setEditOpen(false)}>
+          <form onSubmit={saveProfile}>
+            <div className="profile-edit-fields">
+              <label className="field">
+                <span>Tên hiển thị</span>
+                <input
+                  className="text-input"
+                  value={profileDraft.display_name}
+                  maxLength={120}
+                  required
+                  onChange={(event) => setProfileDraft((draft) => ({ ...draft, display_name: event.target.value }))}
+                />
+              </label>
+              <label className="field">
+                <span>Liên kết ảnh đại diện</span>
+                <input
+                  className="text-input"
+                  type="url"
+                  placeholder="https://…"
+                  value={profileDraft.avatar_url}
+                  onChange={(event) => setProfileDraft((draft) => ({ ...draft, avatar_url: event.target.value }))}
+                />
+              </label>
+              <label className="field profile-bio-field">
+                <span>Giới thiệu</span>
+                <textarea
+                  className="text-input"
+                  rows={3}
+                  maxLength={500}
+                  value={profileDraft.bio}
+                  onChange={(event) => setProfileDraft((draft) => ({ ...draft, bio: event.target.value }))}
+                  placeholder="Một vài dòng về bạn"
+                />
+              </label>
+            </div>
+            <div className="profile-edit-footer">
+              <span aria-live="polite">{profileMessage}</span>
+              <button className="button primary" type="submit" disabled={profileSaving}>
+                {profileSaving ? 'Đang lưu…' : 'Lưu hồ sơ'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
-      {user.role === 'moderator' && <section className="moderator-profile-stats" aria-label="Thống kê kiểm duyệt">
-        <div className="moderator-profile-heading"><div><span className="overline">KHÔNG GIAN MODERATOR</span><h2>Hoạt động kiểm duyệt</h2></div><span className="moderator-role-chip">Moderator</span></div>
-        {moderationStatsError && <ErrorNote>{moderationStatsError}</ErrorNote>}
-        <div className="moderator-stat-grid">
-          <article><span>Quyết định đã xử lý</span><strong>{moderationStats?.decisions_count ?? '—'}</strong></article>
-            <article><span>Video bị từ chối</span><strong>{moderationStats?.rejected_videos_count ?? '—'}</strong></article>
-          <article><span>Báo cáo đang chờ</span><strong>{moderationStats?.open_reports_count ?? '—'}</strong></article>
-          <article><span>Khiếu nại đã xử lý</span><strong>{moderationStats?.handled_appeals_count ?? '—'}</strong></article>
-        </div>
-      </section>}
+      {confirmDeleteId && (
+        <Modal title="Xác nhận xóa video" onClose={() => setConfirmDeleteId(null)}>
+          <p>Bạn có chắc chắn muốn xóa video này? Hành động này không thể hoàn tác.</p>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '12px' }}>
+            <button type="button" className="button ghost" onClick={() => setConfirmDeleteId(null)}>
+              Hủy
+            </button>
+            <button
+              type="button"
+              className="button danger"
+              disabled={busyId === confirmDeleteId}
+              onClick={() => {
+                const video = videos.find((v) => v.id === confirmDeleteId)
+                setConfirmDeleteId(null)
+                if (video) remove(video)
+              }}
+            >
+              {busyId === confirmDeleteId ? 'Đang xóa…' : 'Xóa'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {user.role === 'moderator' && (
+        <section className="moderator-profile-stats" aria-label="Thống kê kiểm duyệt">
+          <div className="moderator-profile-heading">
+            <div>
+              <span className="overline">KHÔNG GIAN MODERATOR</span>
+              <h2>Hoạt động kiểm duyệt</h2>
+            </div>
+          </div>
+          {moderationStatsError && <ErrorNote>{moderationStatsError}</ErrorNote>}
+          <div className="moderator-stat-grid">
+            <article>
+              <span>Quyết định đã xử lý</span>
+              <strong>{moderationStats?.decisions_count ?? '—'}</strong>
+            </article>
+            <article>
+              <span>Video bị từ chối</span>
+              <strong>{moderationStats?.rejected_videos_count ?? '—'}</strong>
+            </article>
+            <article>
+              <span>Báo cáo đang chờ</span>
+              <strong>{moderationStats?.open_reports_count ?? '—'}</strong>
+            </article>
+            <article>
+              <span>Khiếu nại đã xử lý</strong>
+              <strong>{moderationStats?.handled_appeals_count ?? '—'}</strong>
+            </article>
+          </div>
+        </section>
+      )}
 
       {videos.length === 0 ? (
         <EmptyState
@@ -235,7 +369,7 @@ export default function ProfilePage() {
                         <video src={streamUrl(video.id)} poster={thumbnailUrl(video.id)} muted playsInline preload="none" />
                       </span>
                       <span className="video-row-copy">
-                        <strong>{video.caption || video.original_filename}</strong>
+                        <strong>{video.caption || 'Không có mô tả'}</strong>
                         <span>
                           {formatDateTime(video.created_at)} · {formatBytes(video.size_bytes)}
                         </span>
@@ -243,10 +377,21 @@ export default function ProfilePage() {
                       <StatusBadge status={video.status} label={VIDEO_STATUS_LABEL[video.status] || video.status} />
                     </button>
                     <span className="video-row-actions">
-                      <button type="button" className="button ghost small" onClick={() => navigate(`/edit-video?video_id=${encodeURIComponent(video.id)}`)}>
+                      <button
+                        type="button"
+                        className="button ghost small"
+                        onClick={() => navigate(`/edit-video?video_id=${encodeURIComponent(video.id)}`)}
+                      >
                         <Icon name="edit" size={14} /> Chỉnh sửa
                       </button>
-                      <button type="button" className="icon-button danger" onClick={() => remove(video)} disabled={busyId === video.id} aria-label="Xóa video" title="Xóa video">
+                      <button
+                        type="button"
+                        className="icon-button danger"
+                        onClick={() => setConfirmDeleteId(video.id)}
+                        disabled={busyId === video.id}
+                        aria-label="Xóa video"
+                        title="Xóa video"
+                      >
                         <Icon name="trash" size={16} />
                       </button>
                     </span>

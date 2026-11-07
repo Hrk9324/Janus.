@@ -70,7 +70,7 @@ export default function FeedGrid({ activeTag = '', onSelectVideo }) {
       <div className="feed-grid">
         {videos.map((video) => {
           const authorName = video.author?.username || video.owner_name || video.username || 'janus'
-          const title = video.caption || video.original_filename || 'Video không tiêu đề'
+          const title = video.caption || 'Không có mô tả'
           return (
             <button
               key={video._loopKey || video.id}

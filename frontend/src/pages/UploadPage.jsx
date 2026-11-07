@@ -62,7 +62,7 @@ export default function UploadPage() {
               onChange={(event) => setCaption(event.target.value)}
               placeholder="Video này nói về điều gì?"
               disabled={uploading}
-              style={{ height: '200px', resize: 'none', overflowY: 'auto' }}
+              style={{ height: '100px', resize: 'none', overflowY: 'auto' }}
             />
           </label>
 
