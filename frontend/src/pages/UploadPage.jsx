@@ -43,7 +43,6 @@ export default function UploadPage() {
     <main className="page upload-page">
       <header className="upload-heading">
         <div>
-          <h1>Tải video lên</h1>
           <p>Chia sẻ một khoảnh khắc mới với cộng đồng Janus.</p>
         </div>
       </header>
@@ -63,7 +62,8 @@ export default function UploadPage() {
               onChange={(event) => setCaption(event.target.value)}
               placeholder="Video này nói về điều gì?"
               disabled={uploading}
-              rows={4}
+              rows={8}
+              style={{ resize: 'none' }}
             />
           </label>
 
