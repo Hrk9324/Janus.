@@ -8,6 +8,13 @@ import { toggleLike, toggleFollow, toggleBookmark } from '../api/socialApi'
 import { streamUrl, thumbnailUrl } from '../api/videosApi'
 import { useAuth } from '@/features/auth/AuthContext'
 
+function formatTime(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 function formatViewCount(num) {
   const n = Number(num) || 0
   if (n >= 1_000_000) {
@@ -52,6 +59,7 @@ export default function VideoSlide({
   const [showVolume, setShowVolume] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const [duration, setDuration] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
   const [seeking, setSeeking] = useState(false)
   const [currentViews, setCurrentViews] = useState(
     Number(video.view_count ?? video.views ?? video.play_count ?? 0)
@@ -266,6 +274,7 @@ export default function VideoSlide({
   function handleTimeUpdate() {
     const el = videoRef.current
     if (!el || !isActive || hasCountedRef.current) return
+    setCurrentTime(el.currentTime)
     // Điều kiện 1: Đã xem liên tục từ 5 giây trở lên
     if (el.currentTime >= 5) {
       triggerCountView()
@@ -298,6 +307,7 @@ export default function VideoSlide({
     const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left
     const time = (x / rect.width) * el.duration
     el.currentTime = time
+    setCurrentTime(time)
   }
 
   function handleSeekMove(e) {
@@ -307,6 +317,7 @@ export default function VideoSlide({
     const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left
     const time = (x / rect.width) * el.duration
     el.currentTime = time
+    setCurrentTime(time)
   }
 
   function handleSeekEnd() {
@@ -317,7 +328,11 @@ export default function VideoSlide({
     <article className="slide" ref={containerRef}>
       <div className="slide-stage">
         <div className="slide-video-frame">
-          <div className="video-progress-wrapper">
+          <div className="video-progress-wrapper" onClick={togglePlayback}>
+            <div className="video-progress-time">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
             <div
               className="video-progress-track"
               onMouseDown={handleSeekStart}
@@ -331,7 +346,9 @@ export default function VideoSlide({
               <div
                 className={`video-progress-bar ${seeking ? 'seeking' : ''}`}
                 style={{
-                  width: duration ? `${Math.min(100, (videoRef.current?.currentTime || 0) / duration) * 100}%` : '0%',
+                  width: duration
+                    ? `${Math.min(100, (currentTime / duration) * 100)}%`
+                    : '0%',
                 }}
               />
             </div>

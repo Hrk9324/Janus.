@@ -774,6 +774,28 @@
 .video-progress-bar.seeking {
   background: var(--accent-hover);
   box-shadow: 0 0 10px var(--accent);
+  transition: none;
+}
+
+.video-progress-time {
+  position: absolute;
+  bottom: 28px;
+  left: 8px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0,0,0,.7);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.video-progress-wrapper:hover .video-progress-time {
+  opacity: 1;
 }
 
 .slide-stage video {
