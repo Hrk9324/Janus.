@@ -234,7 +234,6 @@ export default function ProfilePage() {
       <section className="profile-intro">
         <div className="profile-edit-heading">
           <div>
-            <span className="overline">GIỚI THIỆU</span>
             <h2>Giới thiệu</h2>
           </div>
         </div>
