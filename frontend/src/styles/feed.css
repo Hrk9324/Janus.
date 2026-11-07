@@ -86,7 +86,7 @@
   max-height: none;
   border-radius: 10px;
   background: #000;
-  box-shadow: none;
+  box-shadow:none;
   object-fit: contain;
 }
 
@@ -743,4 +743,40 @@
 
 .slide-video-frame > video { width: 100%; height: 100%; max-width: none; max-height: none; }
 .slide-stage video:fullscreen { width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh; }
+
+.video-progress-wrapper {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: pointer;
+  background: linear-gradient(to bottom, rgba(0,0,0,.25), transparent 35%, transparent 65%, rgba(0,0,0,.15));
+}
+
+.video-progress-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255,255,255,.18);
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.video-progress-bar {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.1s linear;
+}
+
+.video-progress-bar.seeking {
+  background: var(--accent-hover);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.slide-stage video {
+  cursor: pointer;
+}
 
