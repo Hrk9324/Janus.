@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
-import { ErrorNote, Spinner, StatusBadge } from '@/shared/components/Feedback'
-import { formatBytes, formatDateTime, VIDEO_STATUS_LABEL } from '@/shared/lib/format'
+import { ErrorNote, Spinner } from '@/shared/components/Feedback'
 import { fetchMyVideos, streamUrl, thumbnailUrl, updateVideo } from '@/features/videos/api/videosApi'
 import '@/styles/profile-editor.css'
 
@@ -146,29 +145,14 @@ export default function EditVideoPage() {
         )}
 
         <aside className="card preview-card">
-          <header className="card-head">
-            <div>
-              <h2>Xem trước</h2>
-              <p className="card-sub">Xem video trước khi lưu thay đổi</p>
-            </div>
-          </header>
-          <div className="card-body preview-body">
-            <div className="preview-thumb">
-              <video
-                src={streamUrl(selectedVideo.id)}
-                poster={thumbnailUrl(selectedVideo.id)}
-                muted
-                playsInline
-                preload="metadata"
-              />
-            </div>
-            <div className="preview-info">
-              <strong>{selectedVideo.caption || 'Không có mô tả'}</strong>
-              <span>
-                {formatDateTime(selectedVideo.created_at)} · {formatBytes(selectedVideo.size_bytes)}
-              </span>
-              <StatusBadge status={selectedVideo.status} />
-            </div>
+          <div className="preview-thumb">
+            <video
+              src={streamUrl(selectedVideo.id)}
+              poster={thumbnailUrl(selectedVideo.id)}
+              muted
+              playsInline
+              preload="metadata"
+            />
           </div>
         </aside>
 
