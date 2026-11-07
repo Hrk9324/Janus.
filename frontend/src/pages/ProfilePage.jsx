@@ -293,9 +293,9 @@ export default function ProfilePage() {
       )}
 
       {avatarOpen && (
-        <Modal title="Hộp thoại thay đổi ảnh đại diện" onClose={() => setAvatarOpen(false)}>
+        <Modal title="Thay đổi ảnh đại diện" onClose={() => setAvatarOpen(false)}>
           <form onSubmit={saveAvatar}>
-            <div className="profile-edit-fields" style={{ flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+            <div className="avatar-modal">
               <label className="field">
                 <span>Chọn ảnh mới</span>
                 <input
@@ -307,14 +307,20 @@ export default function ProfilePage() {
                   required
                 />
               </label>
+              {avatarPreview && <img src={avatarPreview} alt="Xem trước" className="avatar-preview" />}
               {avatarPreview && (
-                <img src={avatarPreview} alt="Xem trước" style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--line)' }} />
+                <div className="avatar-actions">
+                  <button type="button" className="button ghost" onClick={() => {
+                    setAvatarFile(null)
+                    setAvatarPreview(null)
+                  }}>
+                    Chọn lại
+                  </button>
+                  <button className="button primary" type="submit" disabled={avatarSaving || !avatarFile}>
+                    {avatarSaving ? 'Đang lưu…' : 'Lưu ảnh đại diện'}
+                  </button>
+                </div>
               )}
-            </div>
-            <div className="profile-edit-footer" style={{ width: '100%', justifyContent: 'center' }}>
-              <button className="button primary" type="submit" disabled={avatarSaving || !avatarFile}>
-                {avatarSaving ? 'Đang lưu…' : 'Lưu ảnh đại diện'}
-              </button>
             </div>
           </form>
         </Modal>
