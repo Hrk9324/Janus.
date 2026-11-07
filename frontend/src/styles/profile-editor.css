@@ -7,7 +7,7 @@
 .form-stack{display:flex;flex-direction:column;gap:14px}
 .edit-video-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start}
 .edit-card{grid-column:1/2}
-.preview-card{grid-column:2/3;min-height:220px}
+.preview-card{grid-column:2/3;min-height:400px}
 .preview-card .card-body{display:flex;flex-direction:column;gap:12px}
 .preview-thumb{width:100%;height:100%;border-radius:var(--radius);background:#111;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center}
 .preview-thumb video{max-width:100%;max-height:100%;object-fit:contain;display:block}
