@@ -261,16 +261,6 @@ export default function ProfilePage() {
                   onChange={(event) => setProfileDraft((draft) => ({ ...draft, display_name: event.target.value }))}
                 />
               </label>
-              <label className="field">
-                <span>Liên kết ảnh đại diện</span>
-                <input
-                  className="text-input"
-                  type="url"
-                  placeholder="https://…"
-                  value={profileDraft.avatar_url}
-                  onChange={(event) => setProfileDraft((draft) => ({ ...draft, avatar_url: event.target.value }))}
-                />
-              </label>
               <label className="field profile-bio-field">
                 <span>Giới thiệu</span>
                 <textarea
