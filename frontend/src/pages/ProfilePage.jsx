@@ -296,31 +296,63 @@ export default function ProfilePage() {
         <Modal title="Thay đổi ảnh đại diện" onClose={() => setAvatarOpen(false)}>
           <form onSubmit={saveAvatar}>
             <div className="avatar-modal">
-              <label className="field">
+              <div className="avatar-current">
+                <span className="avatar-label">Ảnh đại diện hiện tại</span>
+                <div className="avatar-current-image">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="Avatar hiện tại" />
+                  ) : (
+                    <span className="avatar-placeholder">{user.display_name.slice(0, 2).toUpperCase()}</span>
+                  )}
+                </div>
+              </div>
+
+              <label className="field avatar-file-field">
                 <span>Chọn ảnh mới</span>
                 <input
                   type="file"
                   accept="image/*"
-                  className="text-input"
                   ref={avatarInputRef}
                   onChange={handleAvatarFileChange}
                   required
                 />
+                <span className="field-hint">JPEG, PNG, tối đa 5 MB</span>
               </label>
-              {avatarPreview && <img src={avatarPreview} alt="Xem trước" className="avatar-preview" />}
+
               {avatarPreview && (
-                <div className="avatar-actions">
-                  <button type="button" className="button ghost" onClick={() => {
-                    setAvatarFile(null)
-                    setAvatarPreview(null)
-                  }}>
-                    Chọn lại
-                  </button>
-                  <button className="button primary" type="submit" disabled={avatarSaving || !avatarFile}>
-                    {avatarSaving ? 'Đang lưu…' : 'Lưu ảnh đại diện'}
+                <div className="avatar-preview-wrap">
+                  <img src={avatarPreview} alt="Xem trước" className="avatar-preview" />
+                  <button
+                    type="button"
+                    className="button ghost avatar-remove"
+                    onClick={() => {
+                      setAvatarFile(null)
+                      setAvatarPreview(null)
+                    }}
+                    aria-label="Xóa ảnh đã chọn"
+                  >
+                    <Icon name="trash" size={14} />
                   </button>
                 </div>
               )}
+
+              <div className="avatar-actions">
+                {avatarFile && (
+                  <button
+                    type="button"
+                    className="button ghost"
+                    onClick={() => {
+                      setAvatarFile(null)
+                      setAvatarPreview(null)
+                    }}
+                  >
+                    Chọn lại
+                  </button>
+                )}
+                <button className="button primary" type="submit" disabled={avatarSaving || !avatarFile}>
+                  {avatarSaving ? 'Đang lưu…' : 'Lưu ảnh đại diện'}
+                </button>
+              </div>
             </div>
           </form>
         </Modal>

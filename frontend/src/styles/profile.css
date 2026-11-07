@@ -11,3 +11,16 @@
 .avatar-preview{width:180px;height:180px;border-radius:50%;object-fit:cover;border:2px solid var(--line);background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,0.06)}
 .avatar-actions{display:flex;gap:10px;width:100%;justify-content:center}
 .avatar-actions .button{flex:1}
+
+.avatar-current{width:100%;display:flex;flex-direction:column;gap:10px;align-items:center}
+.avatar-current .avatar-label{font-size:13px;color:var(--text-dim)}
+.avatar-current-image{width:140px;height:140px;border-radius:50%;border:2px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;overflow:hidden}
+.avatar-current-image img{width:100%;height:100%;object-fit:cover}
+.avatar-placeholder{width:100%;height:100%;display:grid;place-items:center;color:var(--text-dim);font-weight:600;font-size:28px;background:var(--surface)}
+
+.avatar-file-field .field-hint{font-size:12px;color:var(--text-dim);margin-top:4px}
+
+.avatar-preview-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center}
+.avatar-preview{width:140px;height:140px;border-radius:50%;object-fit:cover;border:2px solid var(--line);background:var(--surface)}
+.avatar-remove{position:absolute;right:-8px;bottom:-8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.avatar-remove:hover{background:var(--surface);color:var(--danger)}
