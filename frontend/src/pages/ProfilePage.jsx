@@ -19,7 +19,7 @@ const STATUS_TABS = [
 ]
 
 export default function ProfilePage() {
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, updateAvatar } = useAuth()
   const navigate = useNavigate()
   const [videos, setVideos] = useState([])
   const [activeTab, setActiveTab] = useState('all')
@@ -31,6 +31,10 @@ export default function ProfilePage() {
   const [moderationStatsError, setModerationStatsError] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [avatarOpen, setAvatarOpen] = useState(false)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [avatarPreview, setAvatarPreview] = useState(null)
+  const [avatarSaving, setAvatarSaving] = useState(false)
   const [profileDraft, setProfileDraft] = useState({
     display_name: user?.display_name ?? '',
     bio: user?.bio ?? '',
@@ -55,6 +59,29 @@ export default function ProfilePage() {
     }
   }
 
+  async function saveAvatar(event) {
+    event.preventDefault()
+    if (!avatarFile) return
+    setAvatarSaving(true)
+    try {
+      await updateAvatar(avatarFile)
+      setAvatarOpen(false)
+      setAvatarFile(null)
+      setAvatarPreview(null)
+    } catch (requestError) {
+      setProfileMessage(requestError.detail || requestError.message || 'Không thể cập nhật ảnh đại diện.')
+    } finally {
+      setAvatarSaving(false)
+    }
+  }
+
+  function handleAvatarFileChange(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
+
   function openEdit() {
     setProfileDraft({
       display_name: user?.display_name ?? '',
@@ -63,13 +90,6 @@ export default function ProfilePage() {
     })
     setProfileMessage('')
     setEditOpen(true)
-  }
-
-  function handleAvatarSelect(event) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const url = URL.createObjectURL(file)
-    setProfileDraft((draft) => ({ ...draft, avatar_url: url }))
   }
 
   useEffect(() => {
@@ -156,7 +176,7 @@ export default function ProfilePage() {
             type="button"
             className="avatar-edit"
             title="Chỉnh sửa ảnh đại diện"
-            onClick={openEdit}
+            onClick={() => setAvatarOpen(true)}
             aria-label="Chỉnh sửa ảnh đại diện"
           >
             <Icon name="edit" size={14} />
@@ -166,7 +186,7 @@ export default function ProfilePage() {
             type="file"
             accept="image/*"
             hidden
-            onChange={handleAvatarSelect}
+            onChange={handleAvatarFileChange}
           />
         </div>
         <div>
@@ -266,6 +286,34 @@ export default function ProfilePage() {
               <span aria-live="polite">{profileMessage}</span>
               <button className="button primary" type="submit" disabled={profileSaving}>
                 {profileSaving ? 'Đang lưu…' : 'Lưu hồ sơ'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {avatarOpen && (
+        <Modal title="Hộp thoại thay đổi ảnh đại diện" onClose={() => setAvatarOpen(false)}>
+          <form onSubmit={saveAvatar}>
+            <div className="profile-edit-fields" style={{ flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <label className="field">
+                <span>Chọn ảnh mới</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="text-input"
+                  ref={avatarInputRef}
+                  onChange={handleAvatarFileChange}
+                  required
+                />
+              </label>
+              {avatarPreview && (
+                <img src={avatarPreview} alt="Xem trước" style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--line)' }} />
+              )}
+            </div>
+            <div className="profile-edit-footer" style={{ width: '100%', justifyContent: 'center' }}>
+              <button className="button primary" type="submit" disabled={avatarSaving || !avatarFile}>
+                {avatarSaving ? 'Đang lưu…' : 'Lưu ảnh đại diện'}
               </button>
             </div>
           </form>
