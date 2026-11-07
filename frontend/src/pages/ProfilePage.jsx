@@ -171,8 +171,7 @@ export default function ProfilePage() {
         </div>
         <div>
           <h1>
-            {user.display_name}
-            <span className="profile-id">#{user.id ?? ''}</span>
+            {user.display_name} <span className="profile-id">#{user.discriminator ?? ''}</span>
           </h1>
           <p className="page-sub">{user.email}</p>
         </div>
