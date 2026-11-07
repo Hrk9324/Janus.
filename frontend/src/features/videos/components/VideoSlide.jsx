@@ -51,6 +51,8 @@ export default function VideoSlide({
   const [bookmarked, setBookmarked] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+  const [duration, setDuration] = useState(0)
+  const [seeking, setSeeking] = useState(false)
   const [currentViews, setCurrentViews] = useState(
     Number(video.view_count ?? video.views ?? video.play_count ?? 0)
   )
@@ -288,10 +290,52 @@ export default function VideoSlide({
 
   const likeCount = video.likes || video.like_count || 0
 
+  function handleSeekStart(e) {
+    const el = videoRef.current
+    if (!el) return
+    setSeeking(true)
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left
+    const time = (x / rect.width) * el.duration
+    el.currentTime = time
+  }
+
+  function handleSeekMove(e) {
+    const el = videoRef.current
+    if (!el || !seeking) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left
+    const time = (x / rect.width) * el.duration
+    el.currentTime = time
+  }
+
+  function handleSeekEnd() {
+    setSeeking(false)
+  }
+
   return (
     <article className="slide" ref={containerRef}>
       <div className="slide-stage">
         <div className="slide-video-frame">
+          <div className="video-progress-wrapper">
+            <div
+              className="video-progress-track"
+              onMouseDown={handleSeekStart}
+              onMouseMove={handleSeekMove}
+              onMouseUp={handleSeekEnd}
+              onMouseLeave={handleSeekEnd}
+              onTouchStart={(e) => handleSeekStart(e.nativeEvent)}
+              onTouchMove={(e) => handleSeekMove(e.nativeEvent)}
+              onTouchEnd={handleSeekEnd}
+            >
+              <div
+                className={`video-progress-bar ${seeking ? 'seeking' : ''}`}
+                style={{
+                  width: duration ? `${Math.min(100, (videoRef.current?.currentTime || 0) / duration) * 100}%` : '0%',
+                }}
+              />
+            </div>
+          </div>
           <video
             ref={videoRef}
             src={source}
@@ -299,7 +343,6 @@ export default function VideoSlide({
             loop
             playsInline
             autoPlay={isActive}
-            controls
             muted={muted}
             preload={isActive ? 'auto' : 'none'}
             onPlay={() => setPlaying(true)}
@@ -308,6 +351,8 @@ export default function VideoSlide({
             onEnded={handleEnded}
             onError={handleMediaError}
             onCanPlay={handleCanPlay}
+            onDurationChange={(e) => setDuration(e.target.duration)}
+            onLoadedMetadata={(e) => setDuration(e.target.duration)}
           />
         </div>
         {!playing && (
