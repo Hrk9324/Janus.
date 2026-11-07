@@ -3,4 +3,4 @@
 .profile-avatar-wrap{position:relative;display:inline-flex}
 .avatar-edit{position:absolute;top:0;left:0;width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,0.8);border:0;color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;visibility:hidden;transition:opacity .2s ease,background .2s ease}
 .profile-avatar-wrap:hover .avatar-edit{opacity:1;visibility:visible}
-.avatar-edit:hover{background:rgba(0,0,0,1)}
+.avatar-edit:hover{background:rgba(0,0,0,0.8)}
