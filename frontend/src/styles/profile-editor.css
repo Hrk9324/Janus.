@@ -1,7 +1,7 @@
 .profile-edit-panel{margin:0 0 28px;padding:22px 0 24px;border-bottom:1px solid var(--line)}
 .profile-edit-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
 .profile-edit-heading h2{margin:6px 0 0;font-size:20px;letter-spacing:-.5px}
-.profile-edit-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
+.profile-edit-fields{display:flex;flex-direction:column;gap:16px}
 .profile-edit-fields .field{min-width:0}
 .profile-edit-fields .profile-bio-field{grid-column:1/-1}
 .profile-edit-fields textarea.text-input{height:auto;min-height:84px;padding:11px 13px;resize:vertical}
