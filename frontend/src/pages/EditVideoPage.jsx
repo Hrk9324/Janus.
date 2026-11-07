@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import Icon from '@/shared/components/Icon'
-import { ErrorNote, Spinner } from '@/shared/components/Feedback'
-import { fetchMyVideos, updateVideo } from '@/features/videos/api/videosApi'
+import { ErrorNote, Spinner, StatusBadge } from '@/shared/components/Feedback'
+import { formatBytes, formatDateTime, VIDEO_STATUS_LABEL } from '@/shared/lib/format'
+import { fetchMyVideos, streamUrl, thumbnailUrl, updateVideo } from '@/features/videos/api/videosApi'
 import '@/styles/profile-editor.css'
 
 export default function EditVideoPage() {
@@ -94,7 +95,7 @@ export default function EditVideoPage() {
       </div>
 
       <form className="edit-video-grid" onSubmit={submit}>
-        <section className="card">
+        <section className="card edit-card">
           <header className="card-head">
             <div>
               <h2>Thông tin cơ bản</h2>
@@ -143,6 +144,33 @@ export default function EditVideoPage() {
             <span>Video đang được lưu trữ và chờ kiểm duyệt viên xem xét thủ công</span>
           </div>
         )}
+
+        <aside className="card preview-card">
+          <header className="card-head">
+            <div>
+              <h2>Xem trước</h2>
+              <p className="card-sub">Xem video trước khi lưu thay đổi</p>
+            </div>
+          </header>
+          <div className="card-body preview-body">
+            <div className="preview-thumb">
+              <video
+                src={streamUrl(selectedVideo.id)}
+                poster={thumbnailUrl(selectedVideo.id)}
+                muted
+                playsInline
+                preload="metadata"
+              />
+            </div>
+            <div className="preview-info">
+              <strong>{selectedVideo.caption || 'Không có mô tả'}</strong>
+              <span>
+                {formatDateTime(selectedVideo.created_at)} · {formatBytes(selectedVideo.size_bytes)}
+              </span>
+              <StatusBadge status={selectedVideo.status} />
+            </div>
+          </div>
+        </aside>
 
         <div className="edit-actions">
           <button type="button" className="button ghost" onClick={() => navigate(-1)}>
