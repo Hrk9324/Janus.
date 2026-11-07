@@ -18,18 +18,16 @@ export function streamUrl(videoId) {
   return apiUrl(`/v1/videos/${videoId}/stream`)
 }
 
+export function thumbnailUrl(videoId) {
+  return apiUrl(`/v1/videos/${videoId}/thumbnail`)
+}
+
 export function deleteVideo(videoId) {
   return apiFetch(`/v1/videos/${videoId}`, { method: 'DELETE' })
 }
 
 export function updateVideo(videoId, payload) {
   return apiFetch(`/v1/videos/${videoId}`, { method: 'PATCH', body: payload })
-}
-
-export function updateVideoThumbnail(videoId, file) {
-  const form = new FormData()
-  form.append('file', file)
-  return apiFetch(`/v1/videos/${videoId}/thumbnail`, { method: 'PUT', body: form })
 }
 
 export function searchVideosByTag(tag, { limit = 12, cursor } = {}) {

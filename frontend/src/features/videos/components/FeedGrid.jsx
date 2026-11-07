@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import Icon from '@/shared/components/Icon'
-import { fetchFeed, searchVideosByTag } from '../api/videosApi'
+import { fetchFeed, searchVideosByTag, thumbnailUrl } from '../api/videosApi'
 
 function keepPublishedVideos(items = []) {
   return items.filter((video) => (
@@ -80,9 +80,7 @@ export default function FeedGrid({ activeTag = '', onSelectVideo }) {
               aria-label={`Xem video: ${title}`}
             >
               <span className="feed-grid-thumb">
-                {video.thumbnail_url
-                  ? <img src={video.thumbnail_url} alt="" loading="lazy" />
-                  : <span className="feed-grid-placeholder" aria-hidden="true" />}
+                <img src={thumbnailUrl(video.id)} alt="" loading="lazy" />
                 <span className="feed-grid-play"><Icon name="play" size={16} /></span>
                 <span className="feed-grid-duration"><Icon name="play" size={11} />{Number(video.view_count || 0).toLocaleString('vi-VN')} lượt xem</span>
               </span>

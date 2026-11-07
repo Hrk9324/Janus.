@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '@/shared/components/Icon'
 import { StatusBadge } from '@/shared/components/Feedback'
 import { VIDEO_STATUS_LABEL } from '@/shared/lib/format'
-import { fetchMyVideos, updateVideo, updateVideoThumbnail } from '@/features/videos/api/videosApi'
+import { fetchMyVideos, thumbnailUrl, updateVideo } from '@/features/videos/api/videosApi'
 
 const STATUS_TABS = [
   { id: 'all', label: 'Tất cả' },
@@ -23,8 +23,6 @@ export default function EditVideoPage() {
   const [title, setTitle] = useState('')
   const [visibility, setVisibility] = useState('public')
   const [allowComments, setAllowComments] = useState(true)
-  const [coverFile, setCoverFile] = useState(null)
-  const [coverPreview, setCoverPreview] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -46,8 +44,6 @@ export default function EditVideoPage() {
     setTitle(video.caption || video.original_filename || '')
     setVisibility(video.visibility || 'public')
     setAllowComments(video.allow_comments !== false)
-    setCoverFile(null)
-    setCoverPreview(video.thumbnail_url || '')
     setStep('edit')
   }
 
@@ -57,7 +53,6 @@ export default function EditVideoPage() {
     setError('')
     try {
       await updateVideo(selectedVideo.id, { caption: title, visibility, allow_comments: allowComments })
-      if (coverFile) await updateVideoThumbnail(selectedVideo.id, coverFile)
       navigate('/profile')
     } catch (requestError) {
       setError(requestError.detail || requestError.message)
@@ -128,7 +123,7 @@ export default function EditVideoPage() {
                 {filteredVideos.map((video) => (
                   <button key={video.id} type="button" className="video-list-item" onClick={() => selectVideo(video)}>
                     <div className="video-list-thumb">
-                      {video.thumbnail_url && <img src={video.thumbnail_url} alt="" />}
+                      <img src={thumbnailUrl(video.id)} alt="" />
                       <Icon name="play" size={18} />
                     </div>
                     <div className="video-list-info">
@@ -171,19 +166,6 @@ export default function EditVideoPage() {
             </div>
           </header>
           <div className="card-body form-stack">
-            <label className="field">
-              <span>Ảnh bìa video</span>
-              <span className="video-cover-preview">
-                {coverPreview ? <img src={coverPreview} alt="Ảnh bìa xem trước" /> : <span>Chưa có ảnh bìa</span>}
-              </span>
-              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (!file) return
-                setCoverFile(file)
-                setCoverPreview(URL.createObjectURL(file))
-              }} />
-              <small>Chọn ảnh JPG, PNG hoặc WebP, tối đa 5 MB.</small>
-            </label>
             <label className="field">
               <span>Caption</span>
               <input className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nhập tiêu đề video" />
