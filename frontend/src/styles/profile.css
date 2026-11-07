@@ -5,12 +5,17 @@
 .profile-avatar-wrap:hover .avatar-edit{opacity:1;visibility:visible}
 .avatar-edit:hover{background:rgba(0,0,0,0.8)}
 
-.avatar-modal{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:360px}
+.avatar-modal{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;max-width:400px;padding:24px 20px;box-sizing:border-box}
 .avatar-modal .field{width:100%;display:flex;flex-direction:column;gap:8px}
 .avatar-modal .field span{font-weight:600;color:var(--text)}
+.avatar-modal .field input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font-size:14px;cursor:pointer}
+.avatar-modal .field input::file-selector-button{padding:6px 14px;border:none;border-radius:6px;background:var(--line);color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;margin-right:8px}
+.avatar-modal .field input::file-selector-button:hover{background:var(--text-dim);color:#fff}
 .avatar-preview{width:180px;height:180px;border-radius:50%;object-fit:cover;border:2px solid var(--line);background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,0.06)}
 .avatar-actions{display:flex;gap:10px;width:100%;justify-content:center}
-.avatar-actions .button{flex:1}
+.avatar-actions .button{flex:1;padding:10px 14px;font-size:14px}
+.avatar-actions .button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+.avatar-actions .button.ghost:hover{background:var(--surface)}
 
 .avatar-current{width:100%;display:flex;flex-direction:column;gap:10px;align-items:center}
 .avatar-current .avatar-label{font-size:13px;color:var(--text-dim)}
