@@ -319,7 +319,7 @@ export default function ProfilePage() {
               <strong>{moderationStats?.open_reports_count ?? '—'}</strong>
             </article>
             <article>
-              <span>Khiếu nại đã xử lý</strong>
+              <span>Khiếu nại đã xử lý</span>
               <strong>{moderationStats?.handled_appeals_count ?? '—'}</strong>
             </article>
           </div>
