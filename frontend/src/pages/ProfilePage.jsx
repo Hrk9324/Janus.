@@ -239,11 +239,13 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className="profile-intro-body">
-          <p>{user.bio || 'Chưa có giới thiệu.'}</p>
+          <p className={user.bio ? '' : 'empty'}>{user.bio || 'Chưa có giới thiệu.'}</p>
         </div>
-        <button className="button primary" type="button" onClick={openEdit}>
-          Chỉnh sửa thông tin cá nhân
-        </button>
+        <div className="profile-intro-actions">
+          <button className="button ghost" type="button" onClick={openEdit}>
+            Chỉnh sửa thông tin cá nhân
+          </button>
+        </div>
       </section>
 
       {editOpen && (
