@@ -297,9 +297,24 @@ export default function ProfilePage() {
           <form onSubmit={saveAvatar}>
             <div className="avatar-modal">
               <div className="avatar-current">
-                <span className="avatar-label">Ảnh đại diện hiện tại</span>
+                <span className="avatar-label">{avatarPreview ? 'Ảnh đại diện mới' : 'Ảnh đại diện hiện tại'}</span>
                 <div className="avatar-current-image">
-                  {user.avatar_url ? (
+                  {avatarPreview ? (
+                    <>
+                      <img src={avatarPreview} alt="Xem trước" />
+                      <button
+                        type="button"
+                        className="button ghost avatar-remove"
+                        onClick={() => {
+                          setAvatarFile(null)
+                          setAvatarPreview(null)
+                        }}
+                        aria-label="Xóa ảnh đã chọn"
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </>
+                  ) : user.avatar_url ? (
                     <img src={user.avatar_url} alt="Avatar hiện tại" />
                   ) : (
                     <span className="avatar-placeholder">{user.display_name.slice(0, 2).toUpperCase()}</span>
@@ -318,23 +333,6 @@ export default function ProfilePage() {
                 />
                 <span className="field-hint">JPEG, PNG, tối đa 5 MB</span>
               </label>
-
-              {avatarPreview && (
-                <div className="avatar-preview-wrap">
-                  <img src={avatarPreview} alt="Xem trước" className="avatar-preview" />
-                  <button
-                    type="button"
-                    className="button ghost avatar-remove"
-                    onClick={() => {
-                      setAvatarFile(null)
-                      setAvatarPreview(null)
-                    }}
-                    aria-label="Xóa ảnh đã chọn"
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                </div>
-              )}
 
               <div className="avatar-actions">
                 {avatarFile && (
