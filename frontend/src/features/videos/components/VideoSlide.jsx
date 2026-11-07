@@ -124,6 +124,7 @@ export default function VideoSlide({
       shouldPlayRef.current = false
       element.pause()
       element.currentTime = 0
+      setCurrentTime(0)
       setPlaying(false)
     }
   }, [isActive])
@@ -273,8 +274,9 @@ export default function VideoSlide({
 
   function handleTimeUpdate() {
     const el = videoRef.current
-    if (!el || !isActive || hasCountedRef.current) return
+    if (!el || !isActive) return
     setCurrentTime(el.currentTime)
+    if (hasCountedRef.current) return
     // Điều kiện 1: Đã xem liên tục từ 5 giây trở lên
     if (el.currentTime >= 5) {
       triggerCountView()
